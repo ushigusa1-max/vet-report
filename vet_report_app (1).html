@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI診断レポート | 関内どうぶつクリニック</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1a2e45;--teal:#1b7a6e;--tl:#22a090;--gold:#c8a96e;--cream:#f5f0e8;--warm:#faf8f5;--text:#1a1a2e;--muted:#5a6270;--bd:#ddd8ce;--deep:#0d1b2a}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--deep);color:var(--text);min-height:100vh}
+.hdr{background:linear-gradient(135deg,var(--deep),var(--navy));border-bottom:2px solid var(--gold);padding:12px 16px;display:flex;align-items:center;gap:10px}
+.hico{width:32px;height:32px;background:linear-gradient(135deg,var(--teal),var(--tl));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.htxt h1{font-size:13px;color:var(--cream);font-weight:700}
+.htxt p{color:var(--gold);font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.main{max-width:800px;margin:0 auto;padding:14px 12px 60px}
+.card{background:var(--warm);border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid var(--bd)}
+.ct{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;gap:7px;padding-bottom:8px;border-bottom:2px solid var(--cream)}
+.ci{width:24px;height:24px;background:linear-gradient(135deg,var(--teal),var(--tl));border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg label{font-size:9px;font-weight:700;color:var(--teal);letter-spacing:.06em;text-transform:uppercase}
+.fg input,.fg select,.fg textarea{padding:7px 9px;border:1.5px solid var(--bd);border-radius:6px;font-family:"Noto Sans JP",sans-serif;font-size:12px;color:var(--text);background:white;outline:none}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--tl)}
+.full{grid-column:1/-1}
+.tip{background:#e8f4ff;border:1px solid #aacfee;border-radius:6px;padding:9px 12px;margin-bottom:10px;font-size:11px;color:#1a4a7a;line-height:1.65}
+.dz{border:2px dashed var(--bd);border-radius:10px;background:white;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;padding:14px;position:relative}
+.dz.hov{border-color:var(--tl);background:rgba(34,160,144,.04)}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
+.pb{margin-top:8px;width:100%;padding:9px;background:rgba(34,160,144,.07);border:1.5px dashed var(--tl);border-radius:7px;color:var(--teal);font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.pvw{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;margin-top:9px}
+.pitem{position:relative;border-radius:6px;overflow:hidden;border:2px solid var(--bd);aspect-ratio:4/3;background:#f0ede8}
+.pitem img{width:100%;height:100%;object-fit:cover}
+.pitem .dx{position:absolute;top:3px;right:3px;width:18px;height:18px;background:rgba(180,60,60,.88);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center}
+#rdbtn{margin-top:9px;width:100%;padding:10px;border-radius:8px;border:2px solid #ccc;background:#f5f5f5;color:#aaa;font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:700;cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .25s}
+.nt{display:none;margin-top:8px;padding:8px 12px;background:rgba(34,160,144,.1);border:1px solid rgba(34,160,144,.3);border-radius:6px;font-size:11px;color:var(--teal);font-weight:500}
+.nt.on{display:block}
+.ba{width:100%;padding:14px;background:linear-gradient(135deg,var(--teal),var(--tl));color:white;border:none;border-radius:10px;font-family:"Noto Sans JP",sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(27,122,110,.3);display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:12px;transition:all .2s}
+.ba:disabled{opacity:.5;cursor:not-allowed}
+.ld{display:none;text-align:center;padding:36px 20px}.ld.on{display:block}
+.rn{width:44px;height:44px;border:4px solid rgba(27,122,110,.15);border-top-color:var(--tl);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ls{font-size:12px;color:var(--teal);font-weight:500}
+.rs{display:none}.rs.on{display:block}
+.rh{background:linear-gradient(135deg,var(--navy),var(--deep));color:var(--cream);border-radius:10px;padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;border:1px solid rgba(200,169,110,.3)}
+.rh h2{font-size:14px;font-weight:700}
+.rh p{font-size:9px;color:var(--gold);margin-top:2px}
+.rb{background:rgba(34,160,144,.2);border:1px solid var(--tl);color:var(--tl);padding:4px 12px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+.tabs{display:flex;gap:3px;margin-bottom:12px;background:var(--cream);padding:3px;border-radius:8px}
+.tab{flex:1;padding:7px;border:none;border-radius:6px;font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);background:transparent;transition:all .2s}
+.tab.on{background:white;color:var(--navy);box-shadow:0 1px 5px rgba(0,0,0,.1)}
+.tc{display:none}.tc.on{display:block}
+.ab{background:white;border-radius:8px;padding:14px;border:1px solid var(--bd);font-size:11.5px;line-height:1.85;color:var(--text);white-space:pre-wrap;max-height:360px;overflow-y:auto}
+.sep{display:flex;align-items:center;gap:9px;margin:3px 0 12px}
+.sep span{font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.sep hr{flex:1;border:none;border-top:1px solid var(--bd)}
+.pa{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.pp{padding:12px 14px;border:none;border-radius:9px;font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:6px}
+.pp:disabled{opacity:.5;cursor:not-allowed}
+.pv2{background:linear-gradient(135deg,var(--navy),#243b5a);color:var(--cream);box-shadow:0 3px 12px rgba(26,46,69,.3)}
+.po{background:linear-gradient(135deg,var(--gold),#d4a853);color:var(--deep);box-shadow:0 3px 12px rgba(200,169,110,.3)}
+.pl{font-size:9px;opacity:.7;display:block;font-weight:400;margin-top:1px}
+.pi2{text-align:left}
+.sb{display:none;border-radius:6px;padding:9px 13px;font-size:11px;margin-top:10px;font-weight:500}
+.sb.on{display:block}
+.sb.ok{background:rgba(34,160,144,.08);border:1px solid rgba(34,160,144,.25);color:var(--teal)}
+.sb.er{background:rgba(180,60,60,.08);border:1px solid rgba(180,60,60,.25);color:#b03030}
+/* プレビューモーダル */
+#pmo{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);flex-direction:column;-webkit-overflow-scrolling:touch}
+#pmo.on{display:flex}
+#ptb{background:#1a2e45;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+#ptitle{color:white;font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pprint{padding:7px 16px;background:#1b7a6e;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;white-space:nowrap}
+#pclose{padding:7px 12px;background:rgba(255,255,255,.2);color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px}
+#pscroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#pbody{background:white;max-width:210mm;margin:0 auto}
+.ptbl{width:100%;border-collapse:collapse;margin:2mm 0;font-size:8.5pt}
+.ptbl th{color:white;padding:2mm 2.5mm;text-align:left}
+.ptbl td{padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4}
+.ptbl tr:nth-child(even) td{background:#f5f7fa}
+@media(max-width:560px){.pg{grid-template-columns:1fr 1fr}.pa{grid-template-columns:1fr}}
+@media print{
+  #pmo{display:flex!important;position:static!important;background:none!important}
+  #ptb{display:none!important}
+  #pscroll{overflow:visible!important}
+  #pbody{max-width:none!important}
+  body>*:not(#pmo){display:none!important}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
+</style>
+</head>
+<body>
+
+<!-- プレビューモーダル -->
+<div id="pmo">
+  <div id="ptb">
+    <span id="ptitle">プレビュー</span>
+    <button id="pprint" onclick="window.print()">🖨️ 印刷/PDF保存</button>
+    <button id="pclose" onclick="document.getElementById('pmo').classList.remove('on')">✕</button>
+  </div>
+  <div id="pscroll"><div id="pbody"></div></div>
+</div>
+
+<header class="hdr">
+  <div class="hico">🔬</div>
+  <div class="htxt"><h1>AI 診断レポート生成</h1><p>Kannai Animal Clinic</p></div>
+</header>
+
+<main class="main">
+  <div class="card">
+    <div class="ct"><div class="ci">📋</div>患者・来院情報</div>
+    <div class="pg">
+      <div class="fg"><label>患者名</label><input id="petName" placeholder="例：ポチ"></div>
+      <div class="fg"><label>動物種</label>
+        <select id="species"><option>犬</option><option>猫</option><option>うさぎ</option><option>鳥</option><option>その他</option></select>
+      </div>
+      <div class="fg"><label>品種</label><input id="breed" placeholder="例：トイプードル"></div>
+      <div class="fg"><label>年齢</label><input id="age" placeholder="例：6歳"></div>
+      <div class="fg"><label>性別</label>
+        <select id="gender"><option>雄（去勢済）</option><option>雄（未去勢）</option><option>雌（避妊済）</option><option>雌（未避妊）</option></select>
+      </div>
+      <div class="fg"><label>体重(kg)</label><input id="weight" placeholder="例：5.2"></div>
+      <div class="fg"><label>オーナー名</label><input id="ownerName" placeholder="例：田中様"></div>
+      <div class="fg"><label>検査日</label><input type="date" id="examDate"></div>
+      <div class="fg"><label>担当獣医師</label><input id="vetName" placeholder="例：牛草先生"></div>
+      <div class="fg full"><label>主訴・来院理由</label><textarea id="chief" rows="2" placeholder="例：食欲不振・元気消失2日"></textarea></div>
+      <div class="fg full"><label>既往歴・服薬（任意）</label><textarea id="history" rows="2" placeholder="例：3年前に膀胱炎。現在投薬なし。"></textarea></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct"><div class="ci">🖼️</div>検査画像のアップロード</div>
+    <div class="tip"><strong>📌 画像の追加方法</strong>　①タップしてファイル選択　②ドラッグ＆ドロップ　③クリップボードから貼り付け</div>
+    <div class="dz" id="dz">
+      <input type="file" id="fi" accept="image/*" multiple>
+      <div style="font-size:22px;pointer-events:none">📂</div>
+      <div style="font-size:12px;font-weight:600;color:var(--navy);pointer-events:none">タップまたはドラッグで画像を追加</div>
+      <div style="font-size:10px;color:var(--muted);pointer-events:none">JPG / PNG / HEIC など</div>
+    </div>
+    <button class="pb" id="pbtn" onclick="activatePaste()">📋　クリップボードから貼り付け</button>
+    <div class="pvw" id="pvw"></div>
+    <button id="rdbtn" onclick="doReadInfo()" disabled>🔍　画像をアップロードすると患者情報を自動読み取りします</button>
+    <div class="nt" id="ntc"></div>
+  </div>
+
+  <button class="ba" id="abt" onclick="startAnalysis()">
+    <span style="font-size:17px">🧬</span>
+    <div><div>AI解析を開始する</div><div style="font-size:9px;opacity:.8;font-weight:400;margin-top:1px">鑑別診断・次の検査提案レポートを生成します</div></div>
+  </button>
+
+  <div class="ld" id="ld">
+    <div class="rn"></div>
+    <div class="ls" id="lst">解析中...</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px">しばらくお待ちください</div>
+  </div>
+
+  <div class="rs" id="rs">
+    <div class="rh">
+      <div><h2>解析完了 — 診断レポート</h2><p id="rmt"></p></div>
+      <div class="rb">✓ AI解析済み</div>
+    </div>
+    <div class="card">
+      <div class="tabs">
+        <button class="tab on" onclick="stab('vet')">🩺 獣医師用</button>
+        <button class="tab" onclick="stab('own')">👨‍👩‍👧 オーナー向け</button>
+      </div>
+      <div id="tv" class="tc on"><div class="sep"><hr><span>獣医師・スタッフ専用</span><hr></div><div class="ab" id="vb"></div></div>
+      <div id="to" class="tc"><div class="sep"><hr><span>オーナー様にお渡しする資料</span><hr></div><div class="ab" id="ob"></div></div>
+    </div>
+    <div class="pa">
+      <button class="pp pv2" id="bv" onclick="showPrev('vet')">
+        <span style="font-size:18px">📄</span>
+        <div class="pi2">獣医師用 PDF<span class="pl">プレビュー → 印刷/保存</span></div>
+      </button>
+      <button class="pp po" id="bo" onclick="showPrev('own')">
+        <span style="font-size:18px">📋</span>
+        <div class="pi2">オーナー向け PDF<span class="pl">プレビュー → 印刷/保存</span></div>
+      </button>
+    </div>
+    <div class="sb" id="sb"></div>
+  </div>
+</main>
+
+<script>
+var imgs=[], ad={vet:'',own:''};
+document.getElementById('examDate').value=new Date().toISOString().split('T')[0];
+
+document.getElementById('fi').addEventListener('change',function(){ addFiles(Array.from(this.files)); });
+var dzEl=document.getElementById('dz');
+dzEl.addEventListener('dragover',function(e){e.preventDefault();dzEl.classList.add('hov');});
+dzEl.addEventListener('dragleave',function(){dzEl.classList.remove('hov');});
+dzEl.addEventListener('drop',function(e){
+  e.preventDefault();dzEl.classList.remove('hov');
+  addFiles(Array.from(e.dataTransfer.files).filter(function(f){return f.type.startsWith('image/');}));
+});
+function activatePaste(){
+  var b=document.getElementById('pbtn');
+  b.style.background='rgba(34,160,144,.22)';b.textContent='✅ Ctrl+V / ⌘+V を押してください';
+  setTimeout(function(){b.style.background='';b.innerHTML='📋　クリップボードから貼り付け';},8000);
+}
+document.addEventListener('paste',function(e){
+  var it=Array.from(e.clipboardData?e.clipboardData.items:[]).filter(function(i){return i.type.startsWith('image/');});
+  if(it.length){e.preventDefault();addFiles(it.map(function(i){return i.getAsFile();}).filter(Boolean));
+    var b=document.getElementById('pbtn');b.style.background='';b.innerHTML='📋　クリップボードから貼り付け';}
+});
+function addFiles(files){
+  var nf=files.filter(function(f){return f.type.startsWith('image/');});
+  if(!nf.length)return;
+  var p=nf.length;
+  nf.forEach(function(f){
+    var r=new FileReader();
+    r.onload=function(ev){
+      imgs.push({name:f.name||'img.png',data:ev.target.result,type:f.type});
+      render();if(--p===0)doReadInfo();
+    };r.readAsDataURL(f);
+  });
+}
+function render(){
+  document.getElementById('pvw').innerHTML=imgs.map(function(img,i){
+    return '<div class="pitem"><img src="'+img.data+'"><button class="dx" onclick="delImg('+i+')">✕</button></div>';
+  }).join('');
+  var btn=document.getElementById('rdbtn');
+  if(imgs.length){
+    btn.disabled=false;
+    btn.style.cssText='margin-top:9px;width:100%;padding:10px;border-radius:8px;border:2px solid var(--tl);background:rgba(34,160,144,.08);color:var(--teal);font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .25s';
+    btn.textContent='🔍 画像から患者情報を読み取る（再実行）';
+  }else{
+    btn.disabled=true;
+    btn.style.cssText='margin-top:9px;width:100%;padding:10px;border-radius:8px;border:2px solid #ccc;background:#f5f5f5;color:#aaa;font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:700;cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .25s';
+    btn.textContent='🔍 画像をアップロードすると患者情報を自動読み取りします';
+  }
+}
+function delImg(i){imgs.splice(i,1);render();}
+function stab(t){
+  document.querySelectorAll('.tab').forEach(function(el,i){el.classList.toggle('on',(i===0&&t==='vet')||(i===1&&t==='own'));});
+  document.querySelectorAll('.tc').forEach(function(c){c.classList.remove('on');});
+  document.getElementById(t==='vet'?'tv':'to').classList.add('on');
+}
+function setStep(s){document.getElementById('lst').textContent=s;}
+function gv(id){var el=document.getElementById(id);return el?el.value:'';}
+function showNt(msg){var n=document.getElementById('ntc');n.textContent=msg;n.classList.add('on');}
+function showSb(msg,ok){var b=document.getElementById('sb');b.textContent=msg;b.className='sb on '+(ok?'ok':'er');}
+function applyInfo(info){
+  var map={petName:'患者名',breed:'品種',age:'年齢',weight:'体重',ownerName:'オーナー',vetName:'担当医',chief:'主訴',history:'既往歴'};
+  var filled=[];
+  Object.keys(map).forEach(function(f){var el=document.getElementById(f);if(el&&info[f]&&info[f].trim()){el.value=info[f];filled.push(map[f]);}});
+  if(info.examDate)document.getElementById('examDate').value=info.examDate;
+  if(info.species){var s=document.getElementById('species');var o=Array.from(s.options).find(function(o){return o.value===info.species||info.species.includes(o.value);});if(o)s.value=o.value;}
+  if(info.gender){var sg=document.getElementById('gender');var og=Array.from(sg.options).find(function(o){return info.gender.includes(o.value.substring(0,2));});if(og)sg.value=og.value;}
+  return filled;
+}
+function callAPI(messages,maxTokens,cb){
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens||4000,messages:messages})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.error)cb(null,'['+d.error.type+']: '+d.error.message);
+    else cb((d.content||[]).map(function(b){return b.text||'';}).join(''));
+  }).catch(function(e){cb(null,e.message);});
+}
+function imgBlocks(){
+  return imgs.map(function(img){return {type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}};});
+}
+function resizeBlocks(cb){
+  if(!imgs.length){cb([]);return;}
+  var res=new Array(imgs.length),done=0;
+  imgs.forEach(function(img,i){
+    var im=new Image();
+    im.onload=function(){
+      var W=im.width,H=im.height,MAX=1568;
+      if(W<=MAX&&H<=MAX){res[i]={type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}};if(++done===imgs.length)cb(res);return;}
+      var s=Math.min(MAX/W,MAX/H);var cv=document.createElement('canvas');cv.width=Math.round(W*s);cv.height=Math.round(H*s);
+      cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);var rd=cv.toDataURL('image/jpeg',.85);
+      res[i]={type:'image',source:{type:'base64',media_type:'image/jpeg',data:rd.split(',')[1]}};if(++done===imgs.length)cb(res);
+    };im.onerror=function(){res[i]={type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}};if(++done===imgs.length)cb(res);};
+    im.src=img.data;
+  });
+}
+function doReadInfo(){
+  if(!imgs.length)return;
+  var btn=document.getElementById('rdbtn'),abt=document.getElementById('abt');
+  btn.disabled=true;btn.textContent='⏳ 読み取り中...';abt.disabled=true;
+  showNt('🔍 画像から患者情報を読み取り中...');
+  callAPI([{role:'user',content:imgBlocks().concat([{type:'text',text:'この検査資料から患者情報を読み取り、以下のJSONのみで返答してください（説明不要）:\n{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}\n- 記載のない項目は空文字\n- examDateはYYYY-MM-DD形式\n- JSONのみ'}])}],600,function(txt,err){
+    if(!err&&txt){try{var info=JSON.parse(txt.replace(/```json|```/g,'').trim());var filled=applyInfo(info);showNt(filled.length?'✓ 読み取り完了: '+filled.join('・')+' を入力しました。':'✓ 患者情報を読み取れませんでした。手動で入力してください。');}catch(e){showNt('⚠️ 読み取りに失敗しました。手動で入力してください。解析は通常通り実行できます。');}}
+    else{showNt('⚠️ 自動読み取りに失敗しました。手動で入力してください。解析は通常通り実行できます。');}
+    btn.disabled=false;btn.textContent='🔍 再度読み取る';abt.disabled=false;
+  });
+}
+function startAnalysis(){
+  if(!imgs.length&&!gv('chief')){alert('検査画像をアップロードするか、主訴を入力してください。');return;}
+  var btn=document.getElementById('abt');btn.disabled=true;
+  document.getElementById('ld').classList.add('on');document.getElementById('rs').classList.remove('on');
+  function fail(msg){document.getElementById('ld').classList.remove('on');btn.disabled=false;showSb('❌ '+msg,false);}
+  var pn=gv('petName')||'患者',sp=gv('species'),br=gv('breed'),ag=gv('age'),gn=gv('gender'),wt=gv('weight'),ow=gv('ownerName'),ed=gv('examDate'),vn=gv('vetName'),ch=gv('chief'),hi=gv('history');
+  var pi='患者名: '+pn+'\n動物種/品種: '+sp+' '+br+'\n年齢: '+ag+' / 性別: '+gn+' / 体重: '+wt+'kg\nオーナー: '+ow+'\n検査日: '+ed+'\n担当: '+vn+'\n主訴: '+ch+'\n既往歴: '+(hi||'なし')+'\n画像数: '+imgs.length+'枚';
+  var vtP='ベテラン獣医師のAIアシスタントとして、以下の患者情報と検査画像を解析し獣医師用診断レポートを日本語で作成してください。\n\n患者情報\n'+pi+'\n\n【1. 検査結果サマリー】\n各検査項目の数値と正常値を比較し異常値を明確に示す。表形式で整理すること。\n\n【2. 主要所見の評価】\n異常値の臨床的意義を詳細に解説。\n\n【3. 鑑別診断リスト（優先度順）】\n・第1候補: 病名、根拠、確率\n・第2候補: 病名、根拠\n・第3候補: 病名、根拠\n・除外すべき疾患\n\n【4. 次に推奨する検査（優先順）】\n① 最優先検査: 検査名、理由、コスト・緊急度\n② 第2優先検査\n③ 第3優先検査\n\n【5. 治療方針の暫定提案】\n\n【6. モニタリング計画】\n\n【7. クライアントへの説明ポイント（5分版）】\n\n国内外の獣医療・人医療の最新エビデンスを参照し包括的に評価してください。';
+  var otP='関内どうぶつクリニックの獣医師AIアシスタントとして、以下の患者情報と分析をもとに飼い主様向け説明資料を日本語で作成してください。\n\n患者情報\n'+pi+'\n\n【今日の検査について】\n【検査結果のわかりやすいまとめ】\n項目名 | 結果 | 基準値 | 状態\n【現在の状態について】\n【考えられる原因】\n【次のステップ（提案する検査・治療）】\n【ご自宅での注意事項】\n【よくあるご質問（Q&A）】Q1〜Q5（Q1：〜 / A：〜 の形式で）\n【次回来院の目安】\n最後に温かみのある一言メッセージで締めくくってください。';
+  setStep('画像を準備中...');
+  resizeBlocks(function(iblocks){
+    setStep('獣医師用レポートを生成中...');
+    callAPI([{role:'user',content:iblocks.concat([{type:'text',text:vtP}])}],4000,function(vt,err1){
+      if(err1||!vt){fail('獣医師用レポート生成に失敗: '+(err1||'空のレスポンス'));return;}
+      ad.vet=vt;setStep('オーナー向け資料を生成中...');
+      callAPI([{role:'user',content:[{type:'text',text:otP+'\n\n参考（獣医師向け分析）\n'+vt.substring(0,2000)}]}],4000,function(ot,err2){
+        if(err2||!ot){fail('オーナー向け資料生成に失敗: '+(err2||'空のレスポンス'));return;}
+        ad.own=ot;
+        document.getElementById('vb').textContent=vt;document.getElementById('ob').textContent=ot;
+        document.getElementById('rmt').textContent='生成日時: '+new Date().toLocaleString('ja-JP')+'　／　患者: '+pn+'（'+sp+'・'+ag+'）';
+        document.getElementById('ld').classList.remove('on');document.getElementById('rs').classList.add('on');
+        document.getElementById('rs').scrollIntoView({behavior:'smooth'});btn.disabled=false;
+      });
+    });
+  });
+}
+function clean(s){return s.replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1').replace(/`/g,'').replace(/^#+\s*/,'').trim();}
+function md2html(text,ac,hc){
+  var lines=text.split('\n'),out='',rows=[],inT=false;
+  function flush(){
+    if(!rows.length)return;
+    var t='<table class="ptbl">';
+    rows.forEach(function(row,ri){
+      t+='<tr>';
+      row.forEach(function(cell){t+=ri===0?'<th style="background:'+hc+'">'+cell+'</th>':'<td>'+cell+'</td>';});
+      t+='</tr>';
+    });
+    out+=t+'</table>';rows=[];inT=false;
+  }
+  lines.forEach(function(line){
+    var s=line.trim();
+    if(s.startsWith('|')){inT=true;var c=s.split('|').slice(1,-1).map(function(c){return clean(c.trim());});if(!c.every(function(c){return /^[-: ]+$/.test(c);}))rows.push(c);return;}
+    if(inT)flush();
+    if(s.startsWith('【')&&s.includes('】')){out+='<div style="background:'+ac+';color:white;padding:2.5mm 4mm;margin:4mm 0 3mm;font-size:10pt;font-weight:bold;border-radius:2mm">'+clean(s)+'</div>';}
+    else if(/^#{1,3}\s/.test(s)){out+='<div style="background:#e8f0f8;border-left:3px solid '+ac+';padding:2mm 3mm;margin:3mm 0 2mm;font-size:9pt;font-weight:bold">'+clean(s)+'</div>';}
+    else if(s===''||s==='---'){out+='<div style="height:2mm"></div>';}
+    else if(/^Q\d*[：:]/.test(s)){out+='<div style="font-weight:bold;color:'+hc+';margin-top:3mm;font-size:8.5pt">'+clean(s)+'</div>';}
+    else if(/^A\d*[：:]/.test(s)){out+='<div style="color:#2d5a3d;padding-left:4mm;font-size:8.5pt">'+clean(s)+'</div>';}
+    else if(/^[・①②③④⑤⑥⑦⑧⑨]/.test(s)||/^\d+[.、]/.test(s)){out+='<div style="padding-left:4mm;font-size:8.5pt">'+clean(s)+'</div>';}
+    else{out+='<div style="font-size:8.5pt;margin:1mm 0">'+clean(s)+'</div>';}
+  });
+  if(inT)flush();return out;
+}
+function showPrev(type){
+  var isVet=(type==='vet'),content=isVet?ad.vet:ad.own;
+  if(!content){alert('先にAI解析を実行してください。');return;}
+  var pn=gv('petName')||'患者',sp=gv('species'),br=gv('breed'),ag=gv('age'),gn=gv('gender'),wt=gv('weight'),ow=gv('ownerName'),ed=gv('examDate'),vn=gv('vetName'),ch=gv('chief');
+  var now=new Date().toLocaleString('ja-JP');
+  var hc=isVet?'#1a2e45':'#7a5200',ac=isVet?'#1b7a6e':'#9a6800';
+  var title=isVet?'診断レポート（獣医師用）':'検査結果のご説明（オーナー様用）';
+  var conf=isVet?'<span style="background:#cc3333;color:white;font-size:7pt;padding:2px 8px;border-radius:3px;float:right">スタッフ専用</span>':'';
+  var fconf=isVet?'<span style="color:#cc3333;font-weight:bold">【社内限・部外秘】</span>':'<span></span>';
+  document.getElementById('pbody').innerHTML=
+    '<div style="background:'+hc+';color:white;padding:10mm 14mm 8mm;position:relative">'+conf+
+      '<div style="font-size:8pt;color:#c8a96e;margin-bottom:2mm">関内どうぶつクリニック　Kannai Animal Clinic</div>'+
+      '<div style="font-size:16pt;font-weight:bold;margin-bottom:2mm">'+title+'</div>'+
+      '<div style="font-size:7pt;color:#aaa">生成日時: '+now+'</div></div>'+
+    '<div style="margin:5mm 14mm;padding:4mm;background:#f4f7fb;border:1px solid #c0cfe0;border-radius:3mm">'+
+      '<div style="font-size:7pt;font-weight:bold;color:'+hc+';margin-bottom:2mm;text-transform:uppercase;letter-spacing:.05em">患者情報</div>'+
+      '<div style="font-size:8.5pt;margin:1mm 0">患者名: <strong>'+pn+'</strong>　動物種: '+sp+'（'+br+'）　年齢: '+ag+'　性別: '+gn+'　体重: '+wt+'kg</div>'+
+      '<div style="font-size:8.5pt;margin:1mm 0">オーナー: '+ow+'　　検査日: '+ed+'　　担当: '+vn+'</div></div>'+
+    (ch?'<div style="margin:0 14mm 3mm;padding:2mm 3mm 2mm 7mm;border-left:3px solid '+ac+';background:#f8fbf9;font-size:8.5pt"><strong>主訴:</strong> '+ch+'</div>':'')+
+    '<div style="padding:2mm 14mm 12mm">'+md2html(content,ac,hc)+'</div>'+
+    '<div style="border-top:1px solid #e0ddd8;padding:2.5mm 14mm;display:flex;justify-content:space-between;font-size:7pt;color:#888">'+
+      '<span>関内どうぶつクリニック　〒231-0023　横浜市中区</span>'+fconf+'<span>'+pn+'　'+ed+'</span></div>';
+  document.getElementById('ptitle').textContent=title+' — '+pn;
+  document.getElementById('pmo').classList.add('on');
+  document.getElementById('pscroll').scrollTop=0;
+}
+</script>
+</body>
+</html>
