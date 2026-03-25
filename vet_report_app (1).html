@@ -250,13 +250,16 @@ function applyInfo(info){
   return filled;
 }
 function callAPI(messages,maxTokens,cb){
+  var ctrl=new AbortController();
+  var t=setTimeout(function(){ctrl.abort();},55000); // 55秒タイムアウト
   fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens||4000,messages:messages})
-  }).then(function(r){return r.json();}).then(function(d){
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens||4000,messages:messages}),
+    signal:ctrl.signal
+  }).then(function(r){clearTimeout(t);return r.json();}).then(function(d){
     if(d.error)cb(null,'['+d.error.type+']: '+d.error.message);
     else cb((d.content||[]).map(function(b){return b.text||'';}).join(''));
-  }).catch(function(e){cb(null,e.message);});
+  }).catch(function(e){clearTimeout(t);cb(null,e.name==='AbortError'?'タイムアウト(55秒)':e.message);});
 }
 function imgBlocks(){
   return imgs.map(function(img){return {type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}};});
@@ -279,12 +282,21 @@ function resizeBlocks(cb){
 function doReadInfo(){
   if(!imgs.length)return;
   var btn=document.getElementById('rdbtn'),abt=document.getElementById('abt');
-  btn.disabled=true;btn.textContent='⏳ 読み取り中...';abt.disabled=true;
+  btn.disabled=true;btn.textContent='⏳ 読み取り中...';
+  // 解析ボタンは無効にしない（読み取り失敗でも解析は常に実行可能）
   showNt('🔍 画像から患者情報を読み取り中...');
+  // 20秒タイムアウト付きで実行
+  var done=false;
+  var timer=setTimeout(function(){
+    if(done)return;done=true;
+    btn.disabled=false;btn.textContent='🔍 再度読み取る';
+    showNt('⚠️ 読み取りがタイムアウトしました。手動で入力して「AI解析を開始する」を押してください。');
+  },20000);
   callAPI([{role:'user',content:imgBlocks().concat([{type:'text',text:'この検査資料から患者情報を読み取り、以下のJSONのみで返答してください（説明不要）:\n{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}\n- 記載のない項目は空文字\n- examDateはYYYY-MM-DD形式\n- JSONのみ'}])}],600,function(txt,err){
-    if(!err&&txt){try{var info=JSON.parse(txt.replace(/```json|```/g,'').trim());var filled=applyInfo(info);showNt(filled.length?'✓ 読み取り完了: '+filled.join('・')+' を入力しました。':'✓ 患者情報を読み取れませんでした。手動で入力してください。');}catch(e){showNt('⚠️ 読み取りに失敗しました。手動で入力してください。解析は通常通り実行できます。');}}
-    else{showNt('⚠️ 自動読み取りに失敗しました。手動で入力してください。解析は通常通り実行できます。');}
-    btn.disabled=false;btn.textContent='🔍 再度読み取る';abt.disabled=false;
+    if(done)return;done=true;clearTimeout(timer);
+    if(!err&&txt){try{var info=JSON.parse(txt.replace(/```json|```/g,'').trim());var filled=applyInfo(info);showNt(filled.length?'✓ 読み取り完了: '+filled.join('・')+' を入力しました。':'✓ 患者情報を読み取れませんでした。手動で入力してください。');}catch(e){showNt('⚠️ 読み取りに失敗しました。手動で入力してください。');}}
+    else{showNt('⚠️ 自動読み取りに失敗しました。手動で入力してください。');}
+    btn.disabled=false;btn.textContent='🔍 再度読み取る';
   });
 }
 function startAnalysis(){
