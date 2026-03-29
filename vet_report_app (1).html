@@ -144,12 +144,15 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--deep);color:var(--te
   <div class="card">
     <div class="ct"><div class="ci">🖼️</div>検査画像のアップロード</div>
     <div class="tip"><strong>📌 画像の追加方法</strong>　①タップしてファイル選択　②ドラッグ＆ドロップ　③クリップボードから貼り付け</div>
-    <div class="dz" id="dz">
-      <input type="file" id="fi" accept="image/*" multiple>
+    <div class="dz" id="dz" onclick="document.getElementById('fi').click()">
+      <input type="file" id="fi" accept="image/*" multiple style="position:absolute;width:1px;height:1px;opacity:0;top:0;left:0">
       <div style="font-size:22px;pointer-events:none">📂</div>
-      <div style="font-size:12px;font-weight:600;color:var(--navy);pointer-events:none">タップまたはドラッグで画像を追加</div>
+      <div style="font-size:12px;font-weight:600;color:var(--navy);pointer-events:none">タップして画像を選択</div>
       <div style="font-size:10px;color:var(--muted);pointer-events:none">JPG / PNG / HEIC など</div>
     </div>
+    <button onclick="document.getElementById('fi').click()" style="margin-top:8px;width:100%;padding:12px;background:linear-gradient(135deg,var(--teal),var(--tl));color:white;border:none;border-radius:8px;font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;cursor:pointer">
+      📷　画像を選択する
+    </button>
     <button class="pb" id="pbtn" onclick="activatePaste()">📋　クリップボードから貼り付け</button>
     <div class="pvw" id="pvw"></div>
     <button id="rdbtn" onclick="doReadInfo()" disabled>🔍　画像をアップロードすると患者情報を自動読み取りします</button>
