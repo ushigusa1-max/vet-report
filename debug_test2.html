@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>デバッグテスト2</title>
+<style>
+.pitem{position:relative;width:90px;height:68px;border-radius:6px;overflow:hidden;border:2px solid #ddd8ce;display:inline-block}
+.pitem img{width:100%;height:100%;object-fit:cover}
+.pitem .dx{position:absolute;top:2px;right:2px;width:20px;height:20px;background:rgba(180,60,60,.9);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:12px;font-weight:bold;line-height:20px;text-align:center;padding:0}
+</style>
+</head>
+<body style="padding:20px;font-family:sans-serif;background:#f0f0f0">
+<h2>デバッグテスト2（renderImgs追加）</h2>
+
+<div id="log" style="background:white;padding:15px;border-radius:8px;margin-bottom:15px;min-height:80px;font-size:12px;font-family:monospace;white-space:pre-wrap">ログ:
+</div>
+
+<input type="file" id="fi" accept="image/*" multiple onchange="onFileChange(this)" 
+  style="width:100%;padding:10px;border:2px solid #1b7a6e;border-radius:8px;font-size:14px;background:white;margin-bottom:10px">
+
+<div id="pvw" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+
+<script>
+var imgs = [];
+
+function log(msg) {
+  document.getElementById('log').textContent += msg + '\n';
+}
+
+log('ページ読み込み完了');
+
+function onFileChange(input) {
+  log('onFileChange: ' + input.files.length + '枚');
+  var files = input.files;
+  if (!files || !files.length) return;
+  var pending = files.length;
+  for (var i = 0; i < files.length; i++) {
+    (function(f) {
+      if (!f.type.startsWith('image/')) { if(--pending<=0) log('完了'); return; }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        log('FileReader完了: ' + f.name);
+        imgs.push({name: f.name, data: e.target.result, type: f.type});
+        log('imgs.length: ' + imgs.length);
+        renderImgs();
+        if (--pending <= 0) log('全ファイル処理完了');
+      };
+      reader.onerror = function() { log('FileReaderエラー'); if(--pending<=0) log('完了'); };
+      reader.readAsDataURL(f);
+    })(files[i]);
+  }
+}
+
+function renderImgs() {
+  log('renderImgs開始: imgs=' + imgs.length);
+  var pvw = document.getElementById('pvw');
+  if (!pvw) { log('ERROR: pvw要素が見つからない!'); return; }
+  pvw.innerHTML = '';
+  for (var i = 0; i < imgs.length; i++) {
+    var div = document.createElement('div');
+    div.className = 'pitem';
+    var img = document.createElement('img');
+    img.src = imgs[i].data;
+    var btn = document.createElement('button');
+    btn.className = 'dx';
+    btn.textContent = '✕';
+    btn.onclick = (function(idx){ return function(){ imgs.splice(idx,1); renderImgs(); }; })(i);
+    div.appendChild(img);
+    div.appendChild(btn);
+    pvw.appendChild(div);
+  }
+  log('renderImgs完了: DOM要素=' + pvw.children.length + '個');
+}
+</script>
+</body>
+</html>
