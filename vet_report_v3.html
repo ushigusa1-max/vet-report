@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>VetAI Report Pro | AI診断レポート</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a1628;--surface:#111f35;--surface2:#172847;--border:#1e3558;
+  --accent:#22c8b0;--accent2:#1a9d8a;--gold:#c8a96e;--gold2:#a07840;
+  --text:#e8f0f8;--text2:#8ba4c0;--text3:#5a7a9a;
+  --danger:#e05050;--warn:#e09030;--ok:#22c8b0;
+  --vet:#1a3a8a;--vet2:#2448aa;--own:#7a4a00;--own2:#9a6820;
+  --rad:10px;--rad-sm:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.modal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:16px}
+.modal.on{display:flex}
+.mbox{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.mbox h3{font-size:15px;color:var(--text);margin-bottom:6px}
+.mbox p{font-size:11px;color:var(--text2);margin-bottom:16px;line-height:1.7}
+.hdr{background:linear-gradient(135deg,var(--surface),var(--surface2));border-bottom:2px solid var(--gold);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+.hlogo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;cursor:pointer}
+.htxt h1{font-size:14px;color:var(--text);font-weight:700}
+.hclinic{font-size:10px;color:var(--gold);letter-spacing:.05em}
+.hbtns{margin-left:auto;display:flex;gap:6px}
+.hbtn{padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:10px;color:var(--text2);background:transparent;cursor:pointer;font-family:"Noto Sans JP",sans-serif}
+.main{max-width:860px;margin:0 auto;padding:14px 12px 80px}
+.topnav{display:flex;gap:3px;margin-bottom:14px;background:var(--surface);padding:3px;border-radius:10px;border:1px solid var(--border)}
+.tnav{flex:1;padding:8px 4px;border:none;border-radius:7px;font-family:"Noto Sans JP",sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:var(--text3);background:transparent;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tnav .ico{font-size:15px}
+.tnav.on{background:var(--surface2);color:var(--accent);border:1px solid var(--border)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rad);padding:16px;margin-bottom:12px}
+.ct{font-size:12px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.ci{width:26px;height:26px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.ci.gold{background:linear-gradient(135deg,var(--gold2),var(--gold))}
+.badge{margin-left:auto;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;background:rgba(34,200,176,.15);color:var(--accent);border:1px solid rgba(34,200,176,.3)}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:9px;font-weight:700;color:var(--accent2);letter-spacing:.06em;text-transform:uppercase}
+.fg input,.fg select,.fg textarea{padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--rad-sm);font-family:"Noto Sans JP",sans-serif;font-size:12px;color:var(--text);background:var(--surface2);outline:none}
+.fg select option{background:var(--surface2)}
+.full{grid-column:1/-1}
+.uparea{border:2px dashed var(--border);border-radius:var(--rad);padding:20px;text-align:center;cursor:pointer;position:relative}
+.uparea input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upico{font-size:28px;margin-bottom:6px}
+.uptxt{font-size:11px;color:var(--text2)}
+.pvw{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.pitem{position:relative;width:90px;height:68px;border-radius:6px;overflow:hidden;border:2px solid var(--border)}
+.pitem img{width:100%;height:100%;object-fit:cover}
+.pitem .dx{position:absolute;top:2px;right:2px;width:20px;height:20px;background:rgba(220,60,60,.9);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0}
+.pdflist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pdftag{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(200,169,110,.1);border:1px solid rgba(200,169,110,.3);border-radius:20px;font-size:10px;color:var(--gold)}
+.pdftag button{background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:0}
+.ocrnote{display:none;margin-top:8px;padding:8px 12px;background:rgba(34,200,176,.08);border:1px solid rgba(34,200,176,.2);border-radius:6px;font-size:11px;color:var(--accent)}
+.ocrnote.on{display:block}
+.vetcard{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:6px;margin-bottom:6px;border:1px solid var(--border)}
+.vetavt{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--vet),var(--vet2));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.vetinfo{flex:1}
+.vetname{font-size:12px;font-weight:700;color:var(--text)}
+.vetmeta{font-size:10px;color:var(--text2)}
+.vetlvl{display:flex;gap:2px}
+.star{font-size:12px;color:var(--text3)}
+.star.on{color:var(--gold)}
+.vetbdg{padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;background:rgba(34,200,176,.15);color:var(--accent)}
+.clinicard{display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);margin-bottom:8px}
+.clinico{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.clininame{font-size:13px;font-weight:700;color:var(--text)}
+.cliniaddr{font-size:10px;color:var(--text2);margin-top:2px}
+.btn-primary{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent2),var(--accent));color:white;border:none;border-radius:var(--rad);font-family:"Noto Sans JP",sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:12px}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-sm{padding:7px 14px;border:1px solid var(--border);border-radius:6px;font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:600;cursor:pointer;background:var(--surface2);color:var(--text2)}
+.btn-danger{padding:7px 14px;border:1px solid rgba(220,80,80,.4);border-radius:6px;font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:600;cursor:pointer;background:rgba(220,80,80,.1);color:var(--danger)}
+.ld{display:none;text-align:center;padding:40px 20px;background:var(--surface);border-radius:var(--rad);margin-bottom:12px;border:1px solid var(--border)}
+.ld.on{display:block}
+.spin{width:44px;height:44px;border:3px solid rgba(34,200,176,.15);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ldtxt{font-size:12px;color:var(--accent);font-weight:500}
+.ldstep{font-size:10px;color:var(--text3);margin-top:4px}
+.rs{display:none}.rs.on{display:block}
+.rhdr{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:var(--rad);padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.rtabs{display:flex;gap:3px;margin-bottom:12px;background:var(--surface);padding:3px;border-radius:8px;border:1px solid var(--border)}
+.rtab{flex:1;padding:8px;border:none;border-radius:6px;font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--text3);background:transparent}
+.rtab.on{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.tc{display:none}.tc.on{display:block}
+.abox{background:var(--surface2);border-radius:8px;padding:14px;border:1px solid var(--border);font-size:11.5px;line-height:1.9;color:var(--text);white-space:pre-wrap;max-height:400px;overflow-y:auto}
+.pbtns{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.pbtn{padding:12px 14px;border:none;border-radius:9px;font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.costgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:10px}
+.costitem{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:12px;cursor:pointer}
+.costitem.sel{border-color:var(--accent);background:rgba(34,200,176,.08)}
+.costitem .cname{font-size:11px;font-weight:700;color:var(--text);margin-bottom:4px}
+.costitem .cwhy{font-size:10px;color:var(--text2);margin-bottom:6px;line-height:1.5}
+.costitem .cprice{font-size:13px;font-weight:700;color:var(--gold)}
+.costitem .curgency{font-size:9px;padding:2px 7px;border-radius:10px;display:inline-block;margin-top:4px}
+.urg-h{background:rgba(220,80,80,.15);color:var(--danger)}
+.urg-m{background:rgba(224,144,48,.15);color:var(--warn)}
+.urg-l{background:rgba(34,200,176,.15);color:var(--accent)}
+.sb{display:none;border-radius:6px;padding:9px 13px;font-size:11px;margin-top:10px}
+.sb.on{display:block}
+.sb.ok{background:rgba(34,200,176,.08);border:1px solid rgba(34,200,176,.25);color:var(--accent)}
+.sb.er{background:rgba(220,80,80,.08);border:1px solid rgba(220,80,80,.25);color:var(--danger)}
+#pmo{display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.9);flex-direction:column}
+#pmo.on{display:flex}
+#ptb{background:var(--surface);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;border-bottom:1px solid var(--border)}
+#ptitle{color:var(--text);font-size:11px;font-weight:600;flex:1}
+#pprint{padding:7px 16px;background:var(--accent2);color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold}
+#pclose{padding:7px 12px;background:rgba(255,255,255,.1);color:var(--text);border:none;border-radius:6px;cursor:pointer;font-size:12px}
+#pscroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#pbody{background:white;max-width:210mm;margin:0 auto}
+.page{display:none}.page.on{display:block}
+.setrow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.setrow:last-child{border-bottom:none}
+.setlbl{flex:1;font-size:12px;color:var(--text)}
+.setsub{font-size:10px;color:var(--text3);margin-top:2px}
+@media(max-width:560px){.pg{grid-template-columns:1fr 1fr}.pbtns{grid-template-columns:1fr}.costgrid{grid-template-columns:1fr}.topnav .tnav span:not(.ico){display:none}}
+@media print{#pmo{display:flex!important;position:static!important;background:none!important}#ptb{display:none!important}#pscroll{overflow:visible!important}body>*:not(#pmo){display:none!important}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}
+</style>
+</head>
+<body>
+
+<div id="pmo">
+  <div id="ptb">
+    <span id="ptitle">プレビュー</span>
+    <button id="pprint" onclick="window.print()">印刷/PDF保存</button>
+    <button id="pclose" onclick="document.getElementById('pmo').classList.remove('on')">X 閉じる</button>
+  </div>
+  <div id="pscroll"><div id="pbody"></div></div>
+</div>
+
+<div id="kmo" class="modal">
+  <div class="mbox">
+    <h3>APIキーの設定</h3>
+    <p>Anthropic APIキーを入力してください。施設ごとに別々のAPIキーを設定することで、利用料金が分離されます。</p>
+    <div class="fg" style="margin-bottom:10px">
+      <label>施設識別名</label>
+      <input id="ki_clinic" placeholder="例: 関内どうぶつクリニック">
+    </div>
+    <div class="fg" style="margin-bottom:10px">
+      <label>Anthropic APIキー</label>
+      <input id="ki" type="password" placeholder="sk-ant-api03-..." autocomplete="off" style="font-family:monospace">
+    </div>
+    <div id="kerr" style="display:none;color:var(--danger);font-size:11px;margin-bottom:8px">sk-ant- で始まるキーを入力してください</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="saveKey()" style="flex:1;padding:11px;background:var(--accent2);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">保存して使用する</button>
+      <button onclick="document.getElementById('kmo').classList.remove('on')" style="padding:11px 16px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="vmo" class="modal">
+  <div class="mbox">
+    <h3>獣医師を追加</h3>
+    <p>名簿に獣医師を追加します。OCR読み取り時に担当医の自動認識精度が向上します。</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px">
+      <div class="fg"><label>氏名</label><input id="v_name" placeholder="例：牛草太郎"></div>
+      <div class="fg"><label>よみがな</label><input id="v_kana" placeholder="例：ウシグサタロウ"></div>
+      <div class="fg"><label>資格取得年</label><input id="v_year" type="number" placeholder="例：2010"></div>
+      <div class="fg"><label>専門分野</label><input id="v_spec" placeholder="例：内科・外科"></div>
+      <div class="fg" style="grid-column:1/-1"><label>スキルレベル（1～5）</label>
+        <div style="display:flex;gap:6px;margin-top:4px" id="vlvlsel">
+          <button onclick="setVetLevel(1)" class="lvlbtn" data-lv="1" style="flex:1;padding:8px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:11px">Lv1</button>
+          <button onclick="setVetLevel(2)" class="lvlbtn" data-lv="2" style="flex:1;padding:8px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:11px">Lv2</button>
+          <button onclick="setVetLevel(3)" class="lvlbtn" data-lv="3" style="flex:1;padding:8px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:11px">Lv3</button>
+          <button onclick="setVetLevel(4)" class="lvlbtn" data-lv="4" style="flex:1;padding:8px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:11px">Lv4</button>
+          <button onclick="setVetLevel(5)" class="lvlbtn" data-lv="5" style="flex:1;padding:8px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:11px">Lv5</button>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px" id="lvl_desc">レベルを選択してください</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="addVet()" style="flex:1;padding:11px;background:var(--accent2);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">追加する</button>
+      <button onclick="document.getElementById('vmo').classList.remove('on')" style="padding:11px 16px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="cmo" class="modal">
+  <div class="mbox">
+    <h3>施設を追加</h3>
+    <p>新しい施設を追加します。施設ごとにAPIキーと獣医師名簿を管理します。請求は別法人・別APIキーで分離されます。</p>
+    <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:16px">
+      <div class="fg"><label>施設名</label><input id="c_name" placeholder="例：宮崎犬と猫の病院"></div>
+      <div class="fg"><label>郵便番号</label><input id="c_zip" placeholder="例：880-0001"></div>
+      <div class="fg"><label>住所</label><input id="c_addr" placeholder="例：宮崎市イオンモール宮崎"></div>
+      <div class="fg"><label>電話番号</label><input id="c_tel" placeholder="例：0985-XX-XXXX"></div>
+      <div class="fg"><label>Anthropic APIキー（この施設専用）</label><input id="c_key" type="password" placeholder="sk-ant-api03-..." style="font-family:monospace"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="addClinic()" style="flex:1;padding:11px;background:var(--accent2);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">追加する</button>
+      <button onclick="document.getElementById('cmo').classList.remove('on')" style="padding:11px 16px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<header class="hdr">
+  <div class="hlogo" onclick="document.getElementById('kmo').classList.add('on')" title="APIキー設定">&#128273;</div>
+  <div class="htxt">
+    <h1>VetAI Report Pro</h1>
+    <div class="hclinic" id="hClinicName">施設を選択してください</div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="topnav">
+    <button class="tnav on" onclick="showPage('report')" id="nav_report"><span class="ico">&#129516;</span><span>診断レポート</span></button>
+    <button class="tnav" onclick="showPage('vets')" id="nav_vets"><span class="ico">&#128104;&#8205;&#9877;&#65039;</span><span>獣医師名簿</span></button>
+    <button class="tnav" onclick="showPage('evidence')" id="nav_evidence"><span class="ico">&#128218;</span><span>エビデンス</span></button>
+    <button class="tnav" onclick="showPage('settings')" id="nav_settings"><span class="ico">&#9881;&#65039;</span><span>施設設定</span></button>
+  </div>
+
+  <div class="page on" id="page_report">
+    <div class="card">
+      <div class="ct"><div class="ci gold">&#127973;</div>使用施設 <div class="badge" id="clinic_badge">未選択</div></div>
+      <select id="clinicSel" onchange="onClinicChange()" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:'Noto Sans JP',sans-serif;font-size:13px;color:var(--text);background:var(--surface2)">
+        <option value="">施設を選択...</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <div class="ct"><div class="ci">&#128203;</div>患者・来院情報</div>
+      <div class="pg">
+        <div class="fg"><label>患者名</label><input id="petName" placeholder="例：ポチ"></div>
+        <div class="fg"><label>動物種</label><select id="species"><option>犬</option><option>猫</option><option>うさぎ</option><option>鳥</option><option>その他</option></select></div>
+        <div class="fg"><label>品種</label><input id="breed" placeholder="例：トイプードル"></div>
+        <div class="fg"><label>年齢</label><input id="age" placeholder="例：6歳"></div>
+        <div class="fg"><label>性別</label><select id="gender"><option>雄（去勢済）</option><option>雄（未去勢）</option><option>雌（避妊済）</option><option>雌（未避妊）</option></select></div>
+        <div class="fg"><label>体重(kg)</label><input id="weight" placeholder="例：5.2"></div>
+        <div class="fg"><label>オーナー名</label><input id="ownerName" placeholder="例：田中様"></div>
+        <div class="fg"><label>検査日</label><input type="date" id="examDate"></div>
+        <div class="fg"><label>担当獣医師</label><input id="vetName" placeholder="例：牛草先生" list="vetNameList"><datalist id="vetNameList"></datalist></div>
+        <div class="fg full"><label>主訴・来院理由</label><textarea id="chief" rows="2" placeholder="例：食欲不振・元気消失2日"></textarea></div>
+        <div class="fg full"><label>既往歴・服薬（任意）</label><textarea id="history" rows="2" placeholder="例：3年前に膀胱炎。現在投薬なし。"></textarea></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ct"><div class="ci">&#128444;&#65039;</div>検査画像のアップロード</div>
+      <div class="uparea">
+        <input type="file" id="fi" accept="image/*" multiple onchange="onFileChange(this)">
+        <div class="upico">&#128247;</div>
+        <div class="uptxt">タップして検査結果票・カルテ画像を選択<br><span style="font-size:10px;color:var(--text3)">複数枚対応</span></div>
+      </div>
+      <div class="pvw" id="pvw"></div>
+      <div id="ocrnote" class="ocrnote"></div>
+    </div>
+
+    <div class="card">
+      <div class="ct"><div class="ci gold">&#128218;</div>エビデンスソース <div class="badge" id="evBadge">0件</div></div>
+      <div style="font-size:10px;color:var(--text2);margin-bottom:8px">追加された論文・成書がAI解析の参考文献として使用されます</div>
+      <div class="pdflist" id="pdfTagList"></div>
+      <button class="btn-sm" style="margin-top:8px" onclick="showPage('evidence')">&#128196; エビデンスを管理</button>
+    </div>
+
+    <button class="btn-primary" id="abt" onclick="startAnalysis()">
+      <span style="font-size:18px">&#129516;</span>
+      <div><div>AI解析を開始する</div><div style="font-size:9px;opacity:.75;font-weight:400;margin-top:1px">鑑別診断・検査提案・費用見積もりレポートを生成</div></div>
+    </button>
+
+    <div class="ld" id="ld">
+      <div class="spin"></div>
+      <div class="ldtxt" id="lst">解析中...</div>
+      <div class="ldstep" id="lstep"></div>
+    </div>
+
+    <div class="rs" id="rs">
+      <div class="rhdr">
+        <div>
+          <div style="font-size:14px;font-weight:700">解析完了</div>
+          <div id="rmt" style="font-size:9px;color:var(--gold);margin-top:2px"></div>
+        </div>
+        <div style="background:rgba(34,200,176,.15);border:1px solid var(--accent);color:var(--accent);padding:4px 12px;border-radius:20px;font-size:10px;font-weight:700">AI解析済み</div>
+      </div>
+
+      <div class="card" id="costCard" style="display:none">
+        <div class="ct"><div class="ci">&#128180;</div>推奨検査・費用選択 <div class="badge">クリックで選択</div></div>
+        <div style="font-size:10px;color:var(--text2);margin-bottom:8px">オーナーに説明する検査を選択。選択内容がオーナー向け資料に反映されます。</div>
+        <div class="costgrid" id="costgrid"></div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="btn-sm" onclick="selectAllCosts(true)">全て選択</button>
+          <button class="btn-sm" onclick="selectAllCosts(false)">全て解除</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="rtabs">
+          <button class="rtab on" onclick="stab('vet')">&#129514; 獣医師用レポート</button>
+          <button class="rtab" onclick="stab('own')">&#128106; オーナー向け説明資料</button>
+        </div>
+        <div id="tv" class="tc on">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <hr style="flex:1;border:none;border-top:1px solid var(--border)">
+            <span style="font-size:9px;background:rgba(220,80,80,.1);color:var(--danger);padding:2px 8px;border-radius:10px">獣医師・スタッフ専用</span>
+            <hr style="flex:1;border:none;border-top:1px solid var(--border)">
+          </div>
+          <div class="abox" id="vb"></div>
+        </div>
+        <div id="to" class="tc">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <hr style="flex:1;border:none;border-top:1px solid var(--border)">
+            <span style="font-size:9px;color:var(--text3)">オーナー様にお渡しする資料</span>
+            <hr style="flex:1;border:none;border-top:1px solid var(--border)">
+          </div>
+          <div class="abox" id="ob"></div>
+        </div>
+      </div>
+
+      <div class="pbtns">
+        <button class="pbtn" onclick="showPrev('vet')" style="background:linear-gradient(135deg,var(--vet),var(--vet2));color:#e8f0f8">
+          <span style="font-size:18px">&#128196;</span>
+          <div style="text-align:left">獣医師用PDF<span style="font-size:9px;opacity:.7;display:block;font-weight:400">プレビュー→印刷</span></div>
+        </button>
+        <button class="pbtn" onclick="showPrev('own')" style="background:linear-gradient(135deg,var(--own),var(--own2));color:#fff8e8">
+          <span style="font-size:18px">&#128203;</span>
+          <div style="text-align:left">オーナー向けPDF<span style="font-size:9px;opacity:.7;display:block;font-weight:400">プレビュー→印刷</span></div>
+        </button>
+      </div>
+      <div class="sb" id="sb"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page_vets">
+    <div class="card">
+      <div class="ct"><div class="ci">&#128104;&#8205;&#9877;&#65039;</div>獣医師名簿 <div class="badge" id="vetCount">0名</div></div>
+      <div style="font-size:10px;color:var(--text2);margin-bottom:12px">登録された名前はOCR時に自動参照され、担当医の認識精度が向上します。スキルレベルはレポートの説明ガイダンスに活用されます。</div>
+      <div id="vetList"></div>
+      <button class="btn-primary" style="margin-top:12px" onclick="document.getElementById('vmo').classList.add('on')">+ 獣医師を追加</button>
+    </div>
+    <div class="card">
+      <div class="ct"><div class="ci gold">&#128202;</div>スキルレベル基準</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.9">
+        <div><span style="color:var(--gold)">Level 1</span> — 卒後1〜2年：基本診療・指導医監督下</div>
+        <div><span style="color:var(--gold)">Level 2</span> — 卒後3〜5年：一般診療を独立して担当</div>
+        <div><span style="color:var(--gold)">Level 3</span> — 卒後6〜10年：専門診療・後進指導</div>
+        <div><span style="color:var(--gold)">Level 4</span> — 卒後11〜15年または専門医資格保持</div>
+        <div><span style="color:var(--gold)">Level 5</span> — 卒後16年以上または二次診療・大学病院レベル</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page_evidence">
+    <div class="card">
+      <div class="ct"><div class="ci gold">&#128218;</div>エビデンスソース管理 <div class="badge" id="evCount">0件</div></div>
+      <div style="font-size:10px;color:var(--text2);margin-bottom:12px">論文・成書・ガイドラインをPDFで登録。AI解析時に参照することでハルシネーションを低減し、精度が向上します。</div>
+      <div class="uparea" style="margin-bottom:12px">
+        <input type="file" id="pdffi" accept="application/pdf,.pdf" multiple onchange="onPdfChange(this)">
+        <div class="upico">&#128196;</div>
+        <div class="uptxt">PDFをタップして追加<br><span style="font-size:10px;color:var(--text3)">論文・成書・ガイドライン（複数可）</span></div>
+      </div>
+      <div id="pdfList"></div>
+    </div>
+    <div class="card">
+      <div class="ct"><div class="ci">&#128161;</div>活用のヒント</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.9">
+        <div>・Small Animal Internal Medicine などの標準成書</div>
+        <div>・WSAVA ガイドライン（ワクチン・栄養等）</div>
+        <div>・国内学会誌の関連論文（日獣会誌等）</div>
+        <div>・各検査機器のリファレンスレンジ資料</div>
+        <div style="margin-top:8px;color:var(--text3)">※PDFは要約として使用されます。著作権に留意してください。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page_settings">
+    <div class="card">
+      <div class="ct"><div class="ci gold">&#127973;</div>施設管理</div>
+      <div id="clinicList"></div>
+      <button class="btn-primary" style="margin-top:12px" onclick="document.getElementById('cmo').classList.add('on')">+ 新しい施設を追加</button>
+    </div>
+    <div class="card">
+      <div class="ct"><div class="ci">&#128273;</div>APIキー状態</div>
+      <div class="setrow">
+        <div><div class="setlbl">現在のAPIキー</div><div class="setsub" id="keyStatus">未設定</div></div>
+        <button class="btn-sm" onclick="document.getElementById('kmo').classList.add('on')">変更</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct"><div class="ci">&#9432;</div>アプリ情報</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.9">
+        <div>VetAI Report Pro v3.0</div>
+        <div>対応モデル: claude-sonnet-4-20250514</div>
+        <div>スマートフォン対応（Android / iOS）</div>
+        <div style="margin-top:6px;color:var(--text3)">Powered by Anthropic Claude API</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct"><div class="ci">&#128465;</div>データ管理</div>
+      <div class="setrow">
+        <div><div class="setlbl">全データをリセット</div><div class="setsub">施設・獣医師名簿・設定を削除</div></div>
+        <button class="btn-danger" onclick="if(confirm('全データを削除しますか？')){localStorage.clear();pdfTexts=[];loadAll();}">リセット</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var imgs=[],pdfTexts=[],ad={vet:'',own:''},selectedCosts=[],currentClinic=null,vetLevel_sel=0;
+var VET_LEVEL_DESC=['','研修医レベル（卒後1〜2年）','一般診療担当（卒後3〜5年）','専門診療担当（卒後6〜10年）','専門医資格相当（卒後11〜15年）','二次診療・大学病院レベル（卒後16年以上）'];
+
+document.getElementById('examDate').value=new Date().toISOString().split('T')[0];
+loadAll();
+
+function sget(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
+function sset(k,v){localStorage.setItem(k,JSON.stringify(v));}
+
+function loadAll(){
+  initDefaultClinic();renderClinicSelector();renderClinicList();renderVetList();renderPdfList();updateKeyStatus();
+  var clinics=sget('clinics')||[];
+  if(clinics.length){document.getElementById('clinicSel').value=clinics[0].id;onClinicChange();}
+}
+
+function initDefaultClinic(){
+  var c=sget('clinics');
+  if(!c||!c.length){sset('clinics',[{id:'clinic_default',name:'関内どうぶつクリニック',zip:'231-0023',addr:'横浜市中区尾上町6-90',tel:'045-264-9553',key:''}]);}
+}
+
+function renderClinicSelector(){
+  var clinics=sget('clinics')||[],sel=document.getElementById('clinicSel'),cur=sel.value;
+  sel.innerHTML='<option value="">施設を選択...</option>';
+  clinics.forEach(function(c){var opt=document.createElement('option');opt.value=c.id;opt.textContent=c.name;sel.appendChild(opt);});
+  if(cur)sel.value=cur;
+}
+
+function renderClinicList(){
+  var clinics=sget('clinics')||[],el=document.getElementById('clinicList');
+  if(!clinics.length){el.innerHTML='<div style="font-size:11px;color:var(--text3)">施設が登録されていません</div>';return;}
+  el.innerHTML=clinics.map(function(c,i){
+    return '<div class="clinicard"><div class="clinico">&#127973;</div>'+
+      '<div style="flex:1"><div class="clininame">'+c.name+'</div><div class="cliniaddr">〒'+c.zip+' '+c.addr+'<br>TEL: '+c.tel+'</div></div>'+
+      (i>0?'<button class="btn-danger" onclick="removeClinic(''+c.id+'')">削除</button>':'<span style="font-size:10px;color:var(--text3)">デフォルト</span>')+
+    '</div>';
+  }).join('');
+}
+
+function onClinicChange(){
+  var id=document.getElementById('clinicSel').value,clinics=sget('clinics')||[];
+  currentClinic=clinics.find(function(c){return c.id===id;})||null;
+  if(currentClinic){
+    document.getElementById('hClinicName').textContent=currentClinic.name;
+    document.getElementById('clinic_badge').textContent=currentClinic.name;
+    renderVetList();updateVetDatalist();
+  }
+}
+
+function addClinic(){
+  var name=document.getElementById('c_name').value.trim();
+  if(!name){alert('施設名を入力してください');return;}
+  var zip=document.getElementById('c_zip').value.trim(),addr=document.getElementById('c_addr').value.trim(),tel=document.getElementById('c_tel').value.trim(),key=document.getElementById('c_key').value.trim();
+  var clinics=sget('clinics')||[],id='clinic_'+Date.now();
+  clinics.push({id:id,name:name,zip:zip,addr:addr,tel:tel,key:key});
+  sset('clinics',clinics);
+  if(key)localStorage.setItem('vc_key_'+id,key);
+  document.getElementById('cmo').classList.remove('on');
+  ['c_name','c_zip','c_addr','c_tel','c_key'].forEach(function(f){document.getElementById(f).value='';});
+  renderClinicSelector();renderClinicList();showSb('施設を追加しました: '+name,true);
+}
+
+function removeClinic(id){
+  if(!confirm('この施設を削除しますか？'))return;
+  sset('clinics',(sget('clinics')||[]).filter(function(c){return c.id!==id;}));
+  renderClinicSelector();renderClinicList();
+}
+
+function setVetLevel(lv){
+  vetLevel_sel=lv;
+  document.querySelectorAll('.lvlbtn').forEach(function(btn){
+    var blv=parseInt(btn.getAttribute('data-lv'));
+    btn.style.borderColor=blv<=lv?'var(--gold)':'var(--border)';
+    btn.style.color=blv<=lv?'var(--gold)':'var(--text2)';
+    btn.style.background=blv<=lv?'rgba(200,169,110,.1)':'var(--surface2)';
+  });
+  document.getElementById('lvl_desc').textContent=VET_LEVEL_DESC[lv]||'';
+}
+
+function addVet(){
+  var name=document.getElementById('v_name').value.trim();
+  if(!name){alert('氏名を入力してください');return;}
+  var kana=document.getElementById('v_kana').value.trim(),year=document.getElementById('v_year').value.trim(),spec=document.getElementById('v_spec').value.trim(),lv=vetLevel_sel;
+  var vets=sget('vets')||[],clinicId=(currentClinic||{}).id||'clinic_default';
+  vets.push({id:'vet_'+Date.now(),clinicId:clinicId,name:name,kana:kana,year:parseInt(year)||0,spec:spec,level:lv});
+  sset('vets',vets);
+  document.getElementById('vmo').classList.remove('on');
+  ['v_name','v_kana','v_year','v_spec'].forEach(function(f){document.getElementById(f).value='';});
+  vetLevel_sel=0;setVetLevel(0);renderVetList();updateVetDatalist();
+}
+
+function removeVet(id){
+  sset('vets',(sget('vets')||[]).filter(function(v){return v.id!==id;}));
+  renderVetList();updateVetDatalist();
+}
+
+function renderVetList(){
+  var clinicId=(currentClinic||{}).id||'clinic_default';
+  var vets=(sget('vets')||[]).filter(function(v){return v.clinicId===clinicId;});
+  var el=document.getElementById('vetList');
+  document.getElementById('vetCount').textContent=vets.length+'名';
+  if(!vets.length){el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:8px 0">名簿に獣医師がいません。追加してください。</div>';return;}
+  el.innerHTML=vets.map(function(v){
+    var stars='';
+    for(var i=1;i<=5;i++)stars+='<span class="star'+(i<=v.level?' on':'')+'">&#9733;</span>';
+    var yrs=v.year?(new Date().getFullYear()-v.year)+'年目':'';
+    return '<div class="vetcard"><div class="vetavt">&#128104;&#8205;&#9877;&#65039;</div>'+
+      '<div class="vetinfo"><div class="vetname">'+v.name+(v.kana?' <span style="font-size:10px;color:var(--text3)">'+v.kana+'</span>':'')+'</div>'+
+      '<div class="vetmeta">'+(v.spec||'')+' '+(yrs||'')+'</div></div>'+
+      '<div class="vetlvl">'+stars+'</div>'+
+      '<div class="vetbdg">Lv.'+v.level+'</div>'+
+      '<button class="btn-danger" style="padding:4px 8px;font-size:10px" onclick="removeVet(''+v.id+'')">削除</button>'+
+    '</div>';
+  }).join('');
+}
+
+function updateVetDatalist(){
+  var clinicId=(currentClinic||{}).id||'clinic_default';
+  var vets=(sget('vets')||[]).filter(function(v){return v.clinicId===clinicId;});
+  var dl=document.getElementById('vetNameList');
+  dl.innerHTML=vets.map(function(v){return '<option value="'+v.name+'">';}).join('');
+}
+
+function getVetRoster(){
+  var clinicId=(currentClinic||{}).id||'clinic_default';
+  return (sget('vets')||[]).filter(function(v){return v.clinicId===clinicId;});
+}
+
+function onPdfChange(input){
+  var files=input.files;
+  if(!files||!files.length)return;
+  for(var i=0;i<files.length;i++){
+    (function(f){
+      var reader=new FileReader();
+      reader.onload=function(e){pdfTexts.push({name:f.name,data:e.target.result,size:f.size});renderPdfList();};
+      reader.readAsDataURL(f);
+    })(files[i]);
+  }
+}
+
+function removePdf(idx){pdfTexts.splice(idx,1);renderPdfList();}
+
+function renderPdfList(){
+  var el=document.getElementById('pdfList');
+  document.getElementById('evCount').textContent=pdfTexts.length+'件';
+  document.getElementById('evBadge').textContent=pdfTexts.length+'件';
+  var tagEl=document.getElementById('pdfTagList');
+  if(!pdfTexts.length){el.innerHTML='<div style="font-size:11px;color:var(--text3)">PDFが追加されていません</div>';tagEl.innerHTML='';return;}
+  el.innerHTML=pdfTexts.map(function(p,i){
+    var kb=Math.round(p.size/1024);
+    return '<div class="vetcard"><div class="vetavt" style="background:linear-gradient(135deg,var(--gold2),var(--gold));font-size:14px">&#128196;</div>'+
+      '<div class="vetinfo"><div class="vetname">'+p.name+'</div><div class="vetmeta">'+kb+'KB</div></div>'+
+      '<button class="btn-danger" style="padding:4px 8px;font-size:10px" onclick="removePdf('+i+')">削除</button></div>';
+  }).join('');
+  tagEl.innerHTML=pdfTexts.map(function(p,i){
+    return '<div class="pdftag">&#128196; '+p.name+'<button onclick="removePdf('+i+')">x</button></div>';
+  }).join('');
+}
+
+function getKey(){
+  if(currentClinic&&currentClinic.key)return currentClinic.key;
+  return localStorage.getItem('vc_key')||'';
+}
+
+function saveKey(){
+  var k=document.getElementById('ki').value.trim();
+  if(!k.startsWith('sk-ant-')){document.getElementById('kerr').style.display='block';return;}
+  localStorage.setItem('vc_key',k);
+  if(currentClinic){
+    var clinics=sget('clinics')||[];
+    clinics=clinics.map(function(c){if(c.id===currentClinic.id){c.key=k;}return c;});
+    sset('clinics',clinics);currentClinic.key=k;
+  }
+  document.getElementById('kmo').classList.remove('on');
+  document.getElementById('kerr').style.display='none';
+  updateKeyStatus();showSb('APIキーを保存しました。',true);
+}
+
+function updateKeyStatus(){
+  var k=getKey();
+  document.getElementById('keyStatus').textContent=k?'sk-ant-...'+k.slice(-6)+' (設定済み)':'未設定';
+}
+
+function showPage(name){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
+  document.querySelectorAll('.tnav').forEach(function(n){n.classList.remove('on');});
+  document.getElementById('page_'+name).classList.add('on');
+  document.getElementById('nav_'+name).classList.add('on');
+  if(name==='vets')renderVetList();
+  if(name==='evidence')renderPdfList();
+  if(name==='settings'){renderClinicList();updateKeyStatus();}
+}
+
+function onFileChange(input){
+  var files=input.files;
+  if(!files||!files.length)return;
+  var pending=files.length;
+  for(var i=0;i<files.length;i++){
+    (function(f){
+      if(!f.type.startsWith('image/')){if(--pending<=0)doReadInfo();return;}
+      var reader=new FileReader();
+      reader.onload=function(e){imgs.push({name:f.name,data:e.target.result,type:f.type});renderImgs();if(--pending<=0)doReadInfo();};
+      reader.onerror=function(){if(--pending<=0)doReadInfo();};
+      reader.readAsDataURL(f);
+    })(files[i]);
+  }
+}
+
+function renderImgs(){
+  var pvw=document.getElementById('pvw');pvw.innerHTML='';
+  for(var i=0;i<imgs.length;i++){
+    var div=document.createElement('div');div.className='pitem';
+    var img=document.createElement('img');img.src=imgs[i].data;
+    var btn=document.createElement('button');btn.className='dx';btn.textContent='x';
+    btn.onclick=(function(idx){return function(){imgs.splice(idx,1);renderImgs();};})(i);
+    div.appendChild(img);div.appendChild(btn);pvw.appendChild(div);
+  }
+}
+
+function resizeBlocks(cb){
+  if(!imgs.length){cb([]);return;}
+  var res=new Array(imgs.length),done=0;
+  imgs.forEach(function(img,i){
+    var im=new Image();
+    im.onload=function(){
+      var W=im.width,H=im.height,MAX=1568;
+      if(W<=MAX&&H<=MAX){res[i]={type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}};if(++done===imgs.length)cb(res);return;}
+      var s=Math.min(MAX/W,MAX/H);var cv=document.createElement('canvas');cv.width=Math.round(W*s);cv.height=Math.round(H*s);
+      cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);var rd=cv.toDataURL('image/jpeg',.85);
+      res[i]={type:'image',source:{type:'base64',media_type:'image/jpeg',data:rd.split(',')[1]}};
+      if(++done===imgs.length)cb(res);
+    };
+    im.onerror=function(){res[i]={type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}};if(++done===imgs.length)cb(res);};
+    im.src=img.data;
+  });
+}
+
+function doReadInfo(){
+  if(!imgs.length)return;
+  var ocrnote=document.getElementById('ocrnote');
+  ocrnote.textContent='画像から患者情報を読み取り中...';ocrnote.classList.add('on');
+  document.getElementById('abt').disabled=true;
+  var vets=getVetRoster();
+  var vetNames=vets.map(function(v){return v.name+(v.kana?' ('+v.kana+')':'');}).join('、');
+  var vetHint=vetNames?'
+
+【在籍獣医師名簿（担当医認識に使用）】
+'+vetNames:'';
+  var done=false;
+  var timer=setTimeout(function(){if(done)return;done=true;ocrnote.textContent='タイムアウト。手動入力してください。';document.getElementById('abt').disabled=false;},30000);
+  resizeBlocks(function(iblocks){
+    callAPI([{role:'user',content:iblocks.concat([{type:'text',text:'あなたは動物病院の検査票・カルテの文字認識の専門家です。'+vetHint+'
+
+【最重要ルール】
+検査票の氏名欄には「苗字(オーナー) ペット名 様」の順で記載されることが多い。
+例: カドノソノ ルーチェ 様 → ownerName=カドノソノ、petName=ルーチェ
+例: タナカ カタクリコ 様 → ownerName=タナカ、petName=カタクリコ
+
+【在籍獣医師名簿がある場合】
+担当医欄の文字と名簿を照合し、最も近い名前をvetNameに入力する。カタカナ・略称も考慮すること。
+
+【フォーマット別の見方】
+A. 健康診断報告書: 苗字様=ownerName、名前ちゃん/くん=petName
+B. 検査報告書: 氏名欄の苗字=ownerName、次の名前=petName
+C. IDEXXタイプ: オーナー欄=ownerName、患者名欄=petName
+
+読み取れない項目は空文字。JSONのみで返答:
+{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}'}])}],1500,function(txt,err){
+      if(done)return;done=true;clearTimeout(timer);
+      if(!err&&txt){
+        try{
+          var m=txt.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+          if(m){var filled=applyInfo(JSON.parse(m[0]));ocrnote.textContent=filled.length?'読み取り完了: '+filled.join('・')+' を入力しました。':'読み取れませんでした。手動で入力してください。';}
+          else{ocrnote.textContent='読み取りに失敗。手動で入力してください。';}
+        }catch(e){ocrnote.textContent='読み取りに失敗。手動で入力してください。';}
+      }else{ocrnote.textContent='自動読み取りに失敗。手動で入力してください。';}
+      document.getElementById('abt').disabled=false;
+    });
+  });
+}
+
+function applyInfo(info){
+  var map={petName:'患者名',breed:'品種',age:'年齢',weight:'体重',ownerName:'オーナー',vetName:'担当医',chief:'主訴',history:'既往歴'};
+  var filled=[];
+  Object.keys(map).forEach(function(f){var el=document.getElementById(f);if(el&&info[f]&&info[f].trim()){el.value=info[f];filled.push(map[f]);}});
+  if(info.examDate)document.getElementById('examDate').value=info.examDate;
+  if(info.species){var s=document.getElementById('species');var o=Array.from(s.options).find(function(o){return o.value===info.species||info.species.includes(o.value);});if(o)s.value=o.value;}
+  if(info.gender){var sg=document.getElementById('gender');var og=Array.from(sg.options).find(function(o){return info.gender.includes(o.value.substring(0,2));});if(og)sg.value=og.value;}
+  return filled;
+}
+
+function callAPI(messages,maxTokens,cb){
+  var key=getKey();
+  if(!key){document.getElementById('kmo').classList.add('on');cb(null,'APIキーが未設定です。');return;}
+  var ctrl=new AbortController();
+  var tid=setTimeout(function(){ctrl.abort();},90000);
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens||4000,messages:messages}),
+    signal:ctrl.signal
+  }).then(function(r){clearTimeout(tid);return r.json();}).then(function(d){
+    if(d.error){var msg=d.error.message;if(d.error.type==='authentication_error'){msg='APIキーが無効です。再入力してください。';document.getElementById('kmo').classList.add('on');}cb(null,msg);}
+    else{cb((d.content||[]).map(function(b){return b.text||'';}).join(''));}
+  }).catch(function(e){clearTimeout(tid);cb(null,e.name==='AbortError'?'タイムアウトしました（90秒）。':e.message);});
+}
+
+function buildEvidenceContext(){
+  if(!pdfTexts.length)return '';
+  return '
+
+【参照エビデンスソース('+pdfTexts.length+'件)】
+'+pdfTexts.map(function(p){return '- '+p.name;}).join('
+')+'
+上記の論文・成書の知識を優先参照し、ハルシネーションを避けてください。';
+}
+
+function buildVetContext(vetName){
+  if(!vetName)return '';
+  var vets=getVetRoster();
+  var vet=vets.find(function(v){return v.name===vetName;});
+  if(!vet)return '';
+  var years=vet.year?(new Date().getFullYear()-vet.year)+'年':'';
+  return '
+
+【担当獣医師情報】
+氏名: '+vet.name+'
+経験年数: '+years+'
+スキルレベル: '+vet.level+'/5 ('+VET_LEVEL_DESC[vet.level]+')
+専門分野: '+(vet.spec||'一般診療')+'
+→ レポートの説明深度と専門用語レベルをこの情報に合わせること。';
+}
+
+function startAnalysis(){
+  if(!currentClinic){showSb('施設を選択してください。',false);return;}
+  if(!imgs.length&&!gv('chief')){showSb('検査画像か主訴を入力してください。',false);return;}
+  var btn=document.getElementById('abt');btn.disabled=true;
+  document.getElementById('ld').classList.add('on');document.getElementById('rs').classList.remove('on');
+  selectedCosts=[];
+  function fail(msg){document.getElementById('ld').classList.remove('on');btn.disabled=false;showSb('エラー: '+msg,false);}
+  var pn=gv('petName')||'患者',sp=gv('species'),br=gv('breed'),ag=gv('age'),gn=gv('gender'),wt=gv('weight'),ow=gv('ownerName'),ed=gv('examDate'),vn=gv('vetName'),ch=gv('chief'),hi=gv('history');
+  var pi='患者名: '+pn+'
+動物種: '+sp+'('+br+')
+年齢: '+ag+' 性別: '+gn+' 体重: '+wt+'kg
+オーナー: '+ow+'
+検査日: '+ed+'
+担当: '+vn+'
+主訴: '+ch+'
+既往歴: '+(hi||'なし');
+  var clinicInfo=currentClinic.name+' 〒'+currentClinic.zip+' '+currentClinic.addr+' TEL:'+currentClinic.tel;
+  var evCtx=buildEvidenceContext();var vetCtx=buildVetContext(vn);
+  document.getElementById('lst').textContent='画像を準備中...';document.getElementById('lstep').textContent='';
+  resizeBlocks(function(iblocks){
+    document.getElementById('lst').textContent='獣医師用レポートを生成中...';
+    document.getElementById('lstep').textContent='Step 1/2: 鑑別診断・検査プラン・費用見積もり';
+    var vtP='【獣医師用診断レポート】
+施設: '+clinicInfo+'
+患者情報
+'+pi+vetCtx+evCtx+'
+
+【1.検査結果サマリー】
+各検査項目を表形式で整理。| 検査項目 | 結果 | 基準値 | 判定 |形式。異常値に★、高値H、低値L。
+
+【2.主要所見の評価】
+異常値ごとに臨床的意義・原因・緊急度(高/中/低)を解説。
+
+【3.鑑別診断リスト(優先度順)】
+第1候補: 病名/根拠/確率%
+第2候補: 病名/根拠/確率%
+第3候補: 病名/根拠/確率%
+除外すべき重篤疾患
+
+【4.推奨検査と費用】
+以下のJSON配列を<COST_JSON>タグで必ず出力:
+<COST_JSON>[{"name":"検査名","why":"理由1行","price_low":5000,"price_high":15000,"urgency":"高","what":"この検査でわかること"},{"name":"検査名2","why":"理由","price_low":3000,"price_high":8000,"urgency":"中","what":"わかること"}]</COST_JSON>
+3〜5件の検査を提案すること。
+
+【5.治療方針の暫定提案】
+即座の対応/薬物療法候補/食事・生活指導
+
+【6.モニタリング計画】
+再検査推奨時期/観察すべき症状/悪化時の対応
+
+【7.クライアントへの説明スクリプト】
+経験レベルに合わせた説明スクリプト（導入→結果→鑑別→次の検査→まとめ）';
+    callAPI([{role:'user',content:iblocks.concat([{type:'text',text:vtP}])}],5000,function(vt,err1){
+      if(err1||!vt){fail('獣医師用レポート生成に失敗: '+(err1||'空のレスポンス'));return;}
+      ad.vet=vt;
+      var costs=[];
+      var cjm=vt.match(/<COST_JSON>([\s\S]*?)<\/COST_JSON>/);
+      if(cjm){try{costs=JSON.parse(cjm[1].trim());selectedCosts=costs.map(function(_,i){return i;});}catch(e){}}
+      renderCostGrid(costs);
+      document.getElementById('lst').textContent='オーナー向け資料を生成中...';
+      document.getElementById('lstep').textContent='Step 2/2: わかりやすい説明資料を作成';
+      var costList=costs.map(function(c){return c.name+': '+c.why+' 費用目安'+c.price_low+'〜'+c.price_high+'円 緊急度:'+c.urgency;}).join('
+');
+      var otP='【'+currentClinic.name+' 検査結果説明資料】
+患者情報
+'+pi+evCtx+'
+
+【1.今日の検査について】
+1〜2行でシンプルに。
+
+【2.検査結果のわかりやすいまとめ】
+絵文字で直感的に: | 検査項目 | 結果 | 正常範囲 | 状態 |
+状態: 正常=OK 要注意=注意 異常=異常
+
+【3.今の'+pn+'の状態】
+専門用語なし。数字は具体的な例えで。
+
+【4.考えられる原因】
+最も可能性が高いこと/その他
+
+【5.次のステップ（推奨する検査と費用）】
+'+costList+'
+各検査について飼い主目線でなぜ必要か・何がわかるかを優しく説明。費用の目安を明示。
+
+【6.ご自宅での注意事項】
+食事/運動/すぐ来院が必要な緊急サイン
+
+【7.よくあるご質問 Q&A】
+Q1:(費用) A1:
+Q2:(予後) A2:
+Q3:(日常生活) A3:
+Q4:(検査の必要性) A4:
+Q5:(予防) A5:
+
+【8.次回来院の目安】
+
+【9.担当獣医師からのメッセージ】
+温かみがあり信頼感が伝わるメッセージ。
+
+'+clinicInfo;
+      callAPI([{role:'user',content:[{type:'text',text:otP+'
+
+参考(獣医師向け分析)
+'+vt.substring(0,2500)}]}],5000,function(ot,err2){
+        if(err2||!ot){fail('オーナー向け資料生成に失敗: '+(err2||'空のレスポンス'));return;}
+        ad.own=ot;
+        document.getElementById('vb').textContent=vt;document.getElementById('ob').textContent=ot;
+        document.getElementById('rmt').textContent='生成日時: '+new Date().toLocaleString('ja-JP')+'  患者: '+pn+'  施設: '+currentClinic.name;
+        document.getElementById('ld').classList.remove('on');document.getElementById('rs').classList.add('on');
+        document.getElementById('rs').scrollIntoView({behavior:'smooth'});btn.disabled=false;
+      });
+    });
+  });
+}
+
+function renderCostGrid(costs){
+  var grid=document.getElementById('costgrid'),card=document.getElementById('costCard');
+  if(!costs||!costs.length){card.style.display='none';return;}
+  card.style.display='block';
+  grid.innerHTML=costs.map(function(c,i){
+    var urgClass=c.urgency==='高'?'urg-h':c.urgency==='中'?'urg-m':'urg-l';
+    return '<div class="costitem sel" id="cost_'+i+'" onclick="toggleCost('+i+')">'+
+      '<div class="cname">'+c.name+'</div>'+
+      '<div class="cwhy">'+c.why+'<br><span style="font-size:9px">'+c.what+'</span></div>'+
+      '<div class="cprice">'+c.price_low.toLocaleString()+'〜'+c.price_high.toLocaleString()+'円</div>'+
+      '<span class="curgency '+urgClass+'">緊急度: '+c.urgency+'</span>'+
+    '</div>';
+  }).join('');
+}
+
+function toggleCost(i){
+  var el=document.getElementById('cost_'+i);if(!el)return;
+  var idx=selectedCosts.indexOf(i);
+  if(idx>=0){selectedCosts.splice(idx,1);el.classList.remove('sel');}
+  else{selectedCosts.push(i);el.classList.add('sel');}
+}
+
+function selectAllCosts(sel){
+  document.querySelectorAll('.costitem').forEach(function(el,i){
+    if(sel){el.classList.add('sel');if(selectedCosts.indexOf(i)<0)selectedCosts.push(i);}
+    else{el.classList.remove('sel');selectedCosts=[];}
+  });
+}
+
+function stab(t){
+  document.querySelectorAll('.rtab').forEach(function(el,i){el.classList.toggle('on',(i===0&&t==='vet')||(i===1&&t==='own'));});
+  document.querySelectorAll('.tc').forEach(function(c){c.classList.remove('on');});
+  document.getElementById(t==='vet'?'tv':'to').classList.add('on');
+}
+function gv(id){var el=document.getElementById(id);return el?el.value:'';}
+function showSb(msg,ok){var b=document.getElementById('sb');b.textContent=msg;b.className='sb on '+(ok?'ok':'er');}
+
+function clean(s){return s.replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1').replace(/`/g,'').replace(/^#+\s*/,'').replace(/<COST_JSON>[\s\S]*?<\/COST_JSON>/g,'').trim();}
+
+function md2html(text,ac,hc){
+  var lines=text.replace(/<COST_JSON>[\s\S]*?<\/COST_JSON>/g,'').split('
+'),out='',rows=[],inT=false;
+  function flush(){if(!rows.length)return;var t='<table style="width:100%;border-collapse:collapse;margin:2mm 0;font-size:8.5pt">';rows.forEach(function(row,ri){t+='<tr>';row.forEach(function(cell){t+=ri===0?'<th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:left">'+cell+'</th>':'<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4">'+cell+'</td>';});t+='</tr>';});out+=t+'</table>';rows=[];inT=false;}
+  lines.forEach(function(line){
+    var s=line.trim();
+    if(s.startsWith('|')){inT=true;var c=s.split('|').slice(1,-1).map(function(c){return clean(c.trim());});if(!c.every(function(c){return /^[-: ]+$/.test(c);}))rows.push(c);return;}
+    if(inT)flush();
+    if(s.startsWith('【')&&s.includes('】')){out+='<div style="background:'+ac+';color:white;padding:2.5mm 4mm;margin:4mm 0 3mm;font-size:10pt;font-weight:bold;border-radius:2mm">'+clean(s)+'</div>';}
+    else if(/^#{1,3}\s/.test(s)){out+='<div style="background:#e8f0f8;border-left:3px solid '+ac+';padding:2mm 3mm;margin:3mm 0 2mm;font-size:9pt;font-weight:bold">'+clean(s)+'</div>';}
+    else if(s===''||s==='---'){out+='<div style="height:2mm"></div>';}
+    else if(/^Q\d*[：:]/.test(s)){out+='<div style="font-weight:bold;color:'+hc+';margin-top:3mm;font-size:8.5pt">'+clean(s)+'</div>';}
+    else if(/^A\d*[：:]/.test(s)){out+='<div style="color:#2d5a3d;padding-left:4mm;font-size:8.5pt">'+clean(s)+'</div>';}
+    else if(/^[・①②③④⑤⑥⑦⑧⑨]/.test(s)||/^\d+[.、]/.test(s)){out+='<div style="padding-left:4mm;font-size:8.5pt">'+clean(s)+'</div>';}
+    else{out+='<div style="font-size:8.5pt;margin:1mm 0">'+clean(s)+'</div>';}
+  });
+  if(inT)flush();return out;
+}
+
+function showPrev(type){
+  var isVet=(type==='vet'),content=isVet?ad.vet:ad.own;
+  if(!content){showSb('先にAI解析を実行してください。',false);return;}
+  if(!currentClinic){showSb('施設が選択されていません。',false);return;}
+  var pn=gv('petName')||'患者',sp=gv('species'),br=gv('breed'),ag=gv('age'),gn=gv('gender'),wt=gv('weight'),ow=gv('ownerName'),ed=gv('examDate'),vn=gv('vetName'),ch=gv('chief');
+  var now=new Date().toLocaleString('ja-JP');
+  var hc=isVet?'#1a2e45':'#7a4a00',ac=isVet?'#1b7a6e':'#9a6820';
+  var title=isVet?'診断レポート（獣医師用）':'検査結果のご説明（オーナー様用）';
+  var conf=isVet?'<span style="background:#cc3333;color:white;font-size:7pt;padding:2px 8px;border-radius:3px;float:right">スタッフ専用</span>':'';
+  var costSection='';
+  if(!isVet&&selectedCosts.length){
+    var cjm=ad.vet.match(/<COST_JSON>([\s\S]*?)<\/COST_JSON>/);
+    if(cjm){
+      try{
+        var allCosts=JSON.parse(cjm[1].trim());
+        var selList=selectedCosts.map(function(i){return allCosts[i];}).filter(Boolean);
+        if(selList.length){
+          costSection='<div style="background:'+ac+';color:white;padding:2.5mm 4mm;margin:4mm 0 3mm;font-size:10pt;font-weight:bold;border-radius:2mm">【推奨する検査と費用のご案内】</div>'+
+            '<table style="width:100%;border-collapse:collapse;margin:2mm 0;font-size:8.5pt">'+
+            '<tr><th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:left">検査名</th><th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:left">目的・わかること</th><th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:right">費用目安</th><th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:center">緊急度</th></tr>'+
+            selList.map(function(c){
+              var urgBg=c.urgency==='高'?'#ffeeee':c.urgency==='中'?'#fff3e0':'#e8f5e9';
+              return '<tr><td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;font-weight:bold">'+c.name+'</td><td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4">'+c.why+'<br><span style="font-size:7.5pt;color:#555">'+c.what+'</span></td><td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:right">'+c.price_low.toLocaleString()+'〜'+c.price_high.toLocaleString()+'円</td><td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:center;background:'+urgBg+'">'+c.urgency+'</td></tr>';
+            }).join('')+
+          '</table>';
+        }
+      }catch(e){}
+    }
+  }
+  document.getElementById('pbody').innerHTML=
+    '<div style="background:'+hc+';color:white;padding:10mm 14mm 8mm;position:relative">'+conf+
+    '<div style="font-size:8pt;color:#c8a96e;margin-bottom:2mm">'+currentClinic.name+'</div>'+
+    '<div style="font-size:16pt;font-weight:bold;margin-bottom:2mm">'+title+'</div>'+
+    '<div style="font-size:7pt;color:#aaa">生成日時: '+now+'</div></div>'+
+    '<div style="margin:5mm 14mm;padding:4mm;background:#f4f7fb;border:1px solid #c0cfe0;border-radius:3mm">'+
+    '<div style="font-size:7pt;font-weight:bold;color:'+hc+';margin-bottom:2mm;text-transform:uppercase">患者情報</div>'+
+    '<div style="font-size:8.5pt;margin:1mm 0">患者名: <strong>'+pn+'</strong>  動物種: '+sp+'（'+br+'）  年齢: '+ag+'  性別: '+gn+'  体重: '+wt+'kg</div>'+
+    '<div style="font-size:8.5pt;margin:1mm 0">オーナー: '+ow+'    検査日: '+ed+'    担当: '+vn+'</div></div>'+
+    (ch?'<div style="margin:0 14mm 3mm;padding:2mm 3mm 2mm 7mm;border-left:3px solid '+ac+';background:#f8fbf9;font-size:8.5pt"><strong>主訴:</strong> '+ch+'</div>':'')+
+    '<div style="padding:2mm 14mm 8mm">'+md2html(content,ac,hc)+'</div>'+
+    (costSection?'<div style="padding:0 14mm 8mm">'+costSection+'</div>':'')+
+    '<div style="border-top:1px solid #e0ddd8;padding:2.5mm 14mm;display:flex;justify-content:space-between;font-size:7pt;color:#888">'+
+    '<span>'+currentClinic.name+'  〒'+currentClinic.zip+' '+currentClinic.addr+'  TEL:'+currentClinic.tel+'</span>'+
+    (isVet?'<span style="color:#cc3333;font-weight:bold">【社内限・部外秘】</span>':'<span></span>')+
+    '<span>'+pn+'  '+ed+'</span></div>';
+  document.getElementById('ptitle').textContent=title+' — '+pn;
+  document.getElementById('pmo').classList.add('on');
+  document.getElementById('pscroll').scrollTop=0;
+}
+</script>
+</body>
+</html>
