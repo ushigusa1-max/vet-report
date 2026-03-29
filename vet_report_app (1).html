@@ -102,16 +102,13 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--deep);color:var(--te
 </div>
 
 
-<div id="key-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:20px"align-items:center;justify-content:center;padding:20px">
-  <div style="background:white;border-radius:14px;padding:28px 24px;max-width:420px;width:100%">
-    <div style="font-size:20px;margin-bottom:6px">🔑 APIキーを設定</div>
     <div style="font-size:13px;color:#666;margin-bottom:18px;line-height:1.6">
       Anthropic APIキーを入力してください。<br>
       キーはこのブラウザにのみ保存されます。
     </div>
     <input id="key-input" type="password" placeholder="sk-ant-api03-..." 
       style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-family:monospace;margin-bottom:12px;box-sizing:border-box">
-    <button onclick="submitKey()" 
+    <button onclick="saveKey()" 
       style="width:100%;padding:12px;background:#1b7a6e;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
       保存して開始
     </button>
@@ -133,9 +130,6 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--deep);color:var(--te
   </div>
 </div>
 
-<div id="kmodal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:99999;align-items:center;justify-content:center;padding:20px">
-  <div style="background:white;border-radius:12px;padding:24px;width:100%;max-width:440px">
-    <div style="font-size:15px;font-weight:700;color:#1a2e45;margin-bottom:6px">🔑 APIキーの設定</div>
     <div style="font-size:11px;color:#666;margin-bottom:14px;line-height:1.6">Anthropic APIキーを入力してください。<br>キーはこのブラウザにのみ保存され、外部には送信されません。</div>
     <input id="ki" type="password" placeholder="sk-ant-api03-..." 
       style="width:100%;padding:10px;border:1.5px solid #c0cfe0;border-radius:7px;font-size:12px;font-family:monospace;margin-bottom:12px;box-sizing:border-box">
@@ -145,8 +139,21 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--deep);color:var(--te
     </div>
   </div>
 </div>
+<div id="kmodal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:14px;padding:26px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="font-size:16px;font-weight:700;color:#1a2e45;margin-bottom:6px">🔑 APIキーの設定</div>
+    <div style="font-size:11px;color:#666;margin-bottom:16px;line-height:1.7">Anthropic APIキー（<code>sk-ant-...</code>）を入力してください。<br>キーはこのブラウザにのみ保存されます。</div>
+    <input id="ki" type="password" placeholder="sk-ant-api03-..." 
+      style="width:100%;padding:11px;border:1.5px solid #c0cfe0;border-radius:8px;font-size:13px;font-family:monospace;margin-bottom:8px;box-sizing:border-box;outline:none">
+    <div id="kerr" style="display:none;color:#cc3333;font-size:11px;margin-bottom:8px">⚠️ sk-ant- で始まる正しいAPIキーを入力してください</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="saveKey()" style="flex:1;padding:11px;background:#1b7a6e;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">保存して使用する</button>
+      <button onclick="document.getElementById('kmodal').style.display='none'" style="padding:11px 16px;background:#f0ede8;color:#666;border:none;border-radius:8px;font-size:13px;cursor:pointer">閉じる</button>
+    </div>
+  </div>
+</div>
 <header class="hdr">
-  <div class="hico" onclick="showKeyModal()" style="cursor:pointer" title="APIキー設定">🔑</div>
+  <div class="hico" onclick="showKeyModal()" style="cursor:pointer">🔑</div>
   <div class="htxt"><h1>AI 診断レポート生成</h1><p>Kannai Animal Clinic</p></div>
 </header>
 </div>
@@ -226,6 +233,24 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--deep);color:var(--te
 </main>
 
 <script>
+function getKey(){return localStorage.getItem('vc_key')||'';}
+function showKeyModal(){
+  document.getElementById('kmodal').style.display='flex';
+  var inp=document.getElementById('ki');
+  if(inp){inp.value=getKey();inp.focus();}
+}
+function saveKey(){
+  var k=(document.getElementById('ki').value||'').trim();
+  if(!k.startsWith('sk-ant-')){
+    document.getElementById('kerr').style.display='block';
+    return;
+  }
+  localStorage.setItem('vc_key',k);
+  document.getElementById('kmodal').style.display='none';
+  document.getElementById('kerr').style.display='none';
+  showSb('✓ APIキーを保存しました。解析を開始できます。',true);
+}
+
 var imgs=[], ad={vet:'',own:''};
 document.getElementById('examDate').value=new Date().toISOString().split('T')[0];
 if(!getKey()) showKeyModal();
@@ -294,12 +319,8 @@ function applyInfo(info){
   if(info.gender){var sg=document.getElementById('gender');var og=Array.from(sg.options).find(function(o){return info.gender.includes(o.value.substring(0,2));});if(og)sg.value=og.value;}
   return filled;
 }
-function getKey(){
-  return localStorage.getItem('vc_key')||'';
-}
-function saveKey(k){
-  localStorage.setItem('vc_key', k.trim());
-}
+
+
 function callAPI(messages,maxTokens,cb){
   var key=getKey();
   if(!key){
@@ -456,36 +477,17 @@ function showPrev(type){
   document.getElementById('pmo').classList.add('on');
   document.getElementById('pscroll').scrollTop=0;
 }
-function submitKey(){
-  var k = document.getElementById('key-input').value.trim();
-  if(!k || !k.startsWith('sk-')){
-    alert('正しいAPIキーを入力してください（sk- で始まります）');
-    return;
-  }
-  saveKey(k);
-  document.getElementById('key-modal').style.display = 'none';
-  showSb('✓ APIキーを保存しました', true);
-}
+
 function checkKey(){
   if(!getKey()){
-    document.getElementById('key-modal').style.display = 'flex';
+    document.getElementById('kmodal').style.display = 'flex';
   }
 }
-// ページ読み込み時にキーチェック
-window.addEventListener('load', function(){ checkKey(); });
-// Enterキーで送信
-document.addEventListener('keydown', function(e){
-  if(e.key === 'Enter' && document.getElementById('key-modal').style.display !== 'none'){
-    submitKey();
-  }
-});
 
-function showKeyModal(){
-  var existing=getKey();
-  var inp=document.getElementById('ki');
-  if(inp && existing) inp.value=existing;
-  document.getElementById('kmodal').style.display='flex';
-}
+// Enterキーで送信
+
+
+
 function saveKey(){
   var k = document.getElementById('kinput').value.trim();
   if(!k || !k.startsWith('sk-ant-')){
