@@ -335,80 +335,33 @@ function doReadInfo(){
   btn.disabled=true;btn.textContent='⏳ 読み取り中...';
   abt.disabled=true;
   showNt('🔍 画像から患者情報を読み取り中...');
-
-  // 全画像をリサイズして送信
-  resizeBlocks(function(iblocks){
-    var prompt=
-      '動物病院の検査票・カルテ・診察券の画像です。以下の患者情報を丁寧に読み取ってください。
-
-'+
-      '【必ず探す項目】
-'+
-      '1. petName: ペットの名前（カタカナ/ひらがな/漢字/英字）
-'+
-      '2. species: 動物種（犬/猫/うさぎ/鳥/その他）
-'+
-      '3. breed: 品種（例:トイプードル、柴犬、アメショー）
-'+
-      '4. age: 年齢（例:6歳、2歳3ヶ月）
-'+
-      '5. gender: 性別（雄/雌/去勢済/避妊済）
-'+
-      '6. weight: 体重（kg数値のみ、例:5.2）
-'+
-      '7. ownerName: 飼い主の名前（様/オーナー近くの人名）
-'+
-      '8. examDate: 検査日（YYYY-MM-DD形式）
-'+
-      '9. vetName: 担当獣医師名
-'+
-      '10. chief: 主訴・来院理由・症状
-'+
-      '11. history: 既往歴・投薬歴
-
-'+
-      '【注意】
-'+
-      '- 読み取れない項目は空文字にする
-'+
-      '- 数値の単位は除いて数値のみ（体重はkgを除く）
-'+
-      '- 日付はYYYY-MM-DD形式
-'+
-      '- JSONのみ返答（説明文・コードブロック不要）
-
-'+
-      '{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}';
-
-    callAPI(
-      [{role:'user',content:iblocks.concat([{type:'text',text:prompt}])}],
-      1500,
-      function(txt,err){
-        if(!err&&txt){
-          try{
-            var clean=txt.replace(/```json|```/g,'').trim();
-            // JSON部分だけ抽出
-            var jsonMatch=clean.match(/\{[\s\S]*\}/);
-            if(jsonMatch){
-              var info=JSON.parse(jsonMatch[0]);
-              var filled=applyInfo(info);
-              showNt(filled.length
-                ? '✓ 読み取り完了: '+filled.join('・')+' を入力しました。修正が必要な場合は直接編集してください。'
-                : '⚠️ 画像から患者情報を読み取れませんでした。手動で入力してください。');
-            } else {
-              showNt('⚠️ 読み取り結果の解析に失敗しました。手動で入力してください。');
-            }
-          }catch(e){
-            showNt('⚠️ 読み取りに失敗しました。手動で入力してください。');
-          }
-        } else {
-          showNt('⚠️ 自動読み取りに失敗しました。手動で入力してください。解析は通常通り実行できます。');
-        }
-        btn.disabled=false;
-        btn.textContent='🔍 再度読み取る';
-        abt.disabled=false;
-      }
-    );
+  var done=false;
+  var timer=setTimeout(function(){
+    if(done)return;done=true;
+    btn.disabled=false;btn.textContent='🔍 再度読み取る';
+    abt.disabled=false;
+    showNt('⚠️ 読み取りがタイムアウトしました。手動で入力して解析を開始してください。');
+  },25000);
+  var msgs=[{role:'user',content:imgBlocks().concat([{type:'text',text:'この画像から患者情報を読み取り、以下のJSONのみで返答してください（説明不要）:
+{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}
+- 記載のない項目は空文字
+- examDateはYYYY-MM-DD形式
+- JSONのみ'}])}];
+  callAPI(msgs,1000,function(txt,err){
+    if(done)return;done=true;clearTimeout(timer);
+    if(!err&&txt){
+      try{
+        var j=txt.replace(/```json|```/g,'').trim();
+        var m=j.match(/\{[\s\S]*\}/);
+        if(m){
+          var info=JSON.parse(m[0]);
+          var filled=applyInfo(info);
+          showNt(filled.length?'✓ 読み取り完了: '+filled.join('・')+' を入力しました。':'⚠️ 患者情報を読み取れませんでした。手動で入力してください。');
+        }else{showNt('⚠️ 読み取りに失敗しました。手動で入力してください。');}
+      }catch(e){showNt('⚠️ 読み取りに失敗しました。手動で入力してください。');}
+    }else{showNt('⚠️ 自動読み取りに失敗しました。手動で入力してください。');}
+    btn.disabled=false;btn.textContent='🔍 再度読み取る';
+    abt.disabled=false;
   });
 }
 function startAnalysis(){
