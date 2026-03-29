@@ -204,12 +204,7 @@ function saveKey(){
   showSb('✓ APIキーを保存しました。', true);
 }
 
-// 起動時: キーがなければモーダル表示
-setTimeout(function(){
-  if(!getKey()){
-    document.getElementById('kmo').classList.add('on');
-  }
-}, 300);
+// キーが未設定の場合のみ、解析ボタン押下時にモーダル表示（起動時は表示しない）
 
 // ファイル選択 (labelのfor="fi"でも動作、このリスナーでも動作)
 document.getElementById('fi').onchange = function(){
