@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>デバッグテスト</title>
+</head>
+<body style="padding:20px;font-family:sans-serif;background:#f0f0f0">
+<h2>デバッグテスト</h2>
+
+<div id="log" style="background:white;padding:15px;border-radius:8px;margin-bottom:15px;min-height:100px;font-size:12px;font-family:monospace;white-space:pre-wrap">ログ:
+</div>
+
+<input type="file" id="fi" accept="image/*" multiple onchange="onFileChange(this)" 
+  style="width:100%;padding:10px;border:2px solid #1b7a6e;border-radius:8px;font-size:14px;background:white;margin-bottom:10px">
+
+<div id="preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+
+<script>
+function log(msg) {
+  document.getElementById('log').textContent += msg + '\n';
+}
+
+log('ページ読み込み完了');
+log('input要素: ' + (document.getElementById('fi') ? 'あり' : 'なし'));
+
+document.getElementById('fi').addEventListener('change', function() {
+  log('addEventListener発火: ' + this.files.length + '枚');
+});
+
+function onFileChange(input) {
+  log('onFileChange呼ばれた: ' + input.files.length + '枚');
+  var files = input.files;
+  for (var i = 0; i < files.length; i++) {
+    log('ファイル' + i + ': ' + files[i].name + ' (' + files[i].type + ')');
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      log('FileReader完了: ' + e.target.result.length + 'bytes');
+      var img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'width:100px;height:100px;object-fit:cover;border-radius:8px;border:2px solid #1b7a6e';
+      document.getElementById('preview').appendChild(img);
+    };
+    reader.onerror = function(e) {
+      log('FileReaderエラー: ' + e);
+    };
+    reader.readAsDataURL(files[i]);
+  }
+}
+</script>
+</body>
+</html>
