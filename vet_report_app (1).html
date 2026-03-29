@@ -101,8 +101,52 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--deep);color:var(--te
   <div id="pscroll"><div id="pbody"></div></div>
 </div>
 
+
+<div id="key-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:20px"align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:14px;padding:28px 24px;max-width:420px;width:100%">
+    <div style="font-size:20px;margin-bottom:6px">🔑 APIキーを設定</div>
+    <div style="font-size:13px;color:#666;margin-bottom:18px;line-height:1.6">
+      Anthropic APIキーを入力してください。<br>
+      キーはこのブラウザにのみ保存されます。
+    </div>
+    <input id="key-input" type="password" placeholder="sk-ant-api03-..." 
+      style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;font-family:monospace;margin-bottom:12px;box-sizing:border-box">
+    <button onclick="submitKey()" 
+      style="width:100%;padding:12px;background:#1b7a6e;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
+      保存して開始
+    </button>
+    <div style="font-size:11px;color:#999;margin-top:12px;text-align:center">
+      APIキーは <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> で取得できます
+    </div>
+  </div>
+</div>
+<div id="ksaved" style="display:none;background:#1b7a6e;color:white;text-align:center;padding:8px;font-size:12px;font-weight:600">✓ APIキーを保存しました。解析できます。</div>
+<div id="kbar" style="display:none;background:#0d2a1f;padding:12px 16px;border-bottom:2px solid #1b7a6e">
+  <div style="max-width:800px;margin:0 auto">
+    <div style="color:#c8a96e;font-size:12px;font-weight:700;margin-bottom:8px">🔑 Anthropic APIキーを入力してください（初回のみ）</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="kinput" type="password" placeholder="sk-ant-api03-..." 
+        style="flex:1;min-width:220px;padding:8px 12px;border-radius:6px;border:1.5px solid #1b7a6e;background:#0a1f16;color:white;font-size:12px;font-family:monospace">
+      <button onclick="saveKey()" style="padding:8px 20px;background:#1b7a6e;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap">保存して使う</button>
+    </div>
+    <div style="color:#88aa99;font-size:10px;margin-top:6px">キーはこのブラウザにのみ保存されます。GitHubには送信されません。</div>
+  </div>
+</div>
+
+<div id="kmodal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:99999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:12px;padding:24px;width:100%;max-width:440px">
+    <div style="font-size:15px;font-weight:700;color:#1a2e45;margin-bottom:6px">🔑 APIキーの設定</div>
+    <div style="font-size:11px;color:#666;margin-bottom:14px;line-height:1.6">Anthropic APIキーを入力してください。<br>キーはこのブラウザにのみ保存され、外部には送信されません。</div>
+    <input id="ki" type="password" placeholder="sk-ant-api03-..." 
+      style="width:100%;padding:10px;border:1.5px solid #c0cfe0;border-radius:7px;font-size:12px;font-family:monospace;margin-bottom:12px;box-sizing:border-box">
+    <div style="display:flex;gap:8px">
+      <button onclick="saveKey()" style="flex:1;padding:10px;background:#1b7a6e;color:white;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">保存して使用する</button>
+      <button onclick="document.getElementById('kmodal').style.display='none'" style="padding:10px 16px;background:#f0ede8;color:#666;border:none;border-radius:7px;font-size:13px;cursor:pointer">閉じる</button>
+    </div>
+  </div>
+</div>
 <header class="hdr">
-  <div class="hico">🔬</div>
+  <div class="hico" onclick="showKeyModal()" style="cursor:pointer" title="APIキー設定">🔑</div>
   <div class="htxt"><h1>AI 診断レポート生成</h1><p>Kannai Animal Clinic</p></div>
 </header>
 </div>
@@ -184,6 +228,7 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--deep);color:var(--te
 <script>
 var imgs=[], ad={vet:'',own:''};
 document.getElementById('examDate').value=new Date().toISOString().split('T')[0];
+if(!getKey()) showKeyModal();
 
 document.getElementById('fi').addEventListener('change',function(){ addFiles(Array.from(this.files)); });
 var dzEl=document.getElementById('dz');
@@ -249,7 +294,12 @@ function applyInfo(info){
   if(info.gender){var sg=document.getElementById('gender');var og=Array.from(sg.options).find(function(o){return info.gender.includes(o.value.substring(0,2));});if(og)sg.value=og.value;}
   return filled;
 }
-function getKey(){return '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';}
+function getKey(){
+  return localStorage.getItem('vc_key')||'';
+}
+function saveKey(k){
+  localStorage.setItem('vc_key', k.trim());
+}
 function callAPI(messages,maxTokens,cb){
   var key=getKey();
   if(!key){
@@ -268,7 +318,7 @@ function callAPI(messages,maxTokens,cb){
     if(!r.ok){return r.text().then(function(t2){throw new Error('HTTP '+r.status+': '+t2.substring(0,200));});}
     return r.json();
   }).then(function(d){
-    if(d.error)cb(null,'['+d.error.type+']: '+d.error.message);
+    if(d.error){var em='['+d.error.type+']: '+d.error.message;if(d.error.type==='authentication_error')em='APIキーが無効です。🔑ボタンから正しいキーを入力してください。';cb(null,em);}
     else cb((d.content||[]).map(function(b){return b.text||'';}).join(''));
   }).catch(function(e){clearTimeout(t);cb(null,e.name==='AbortError'?'タイムアウト(55秒)':e.message);});
 }
@@ -293,6 +343,10 @@ function resizeBlocks(cb){
 }
 function doReadInfo(){
   if(!imgs.length)return;
+  if(!getKey()){
+    document.getElementById('kbar').style.display='block';
+    return;
+  }
   var btn=document.getElementById('rdbtn'),abt=document.getElementById('abt');
   btn.disabled=true;btn.textContent='⏳ 読み取り中...';
   // 解析ボタンは無効にしない（読み取り失敗でも解析は常に実行可能）
@@ -312,6 +366,12 @@ function doReadInfo(){
   });
 }
 function startAnalysis(){
+  if(!getKey()){
+    document.getElementById('kbar').style.display='block';
+    document.getElementById('kbar').scrollIntoView({behavior:'smooth'});
+    document.getElementById('kinput').focus();
+    return;
+  }
   if(!imgs.length&&!gv('chief')){alert('検査画像をアップロードするか、主訴を入力してください。');return;}
   var btn=document.getElementById('abt');btn.disabled=true;
   document.getElementById('ld').classList.add('on');document.getElementById('rs').classList.remove('on');
@@ -395,6 +455,47 @@ function showPrev(type){
   document.getElementById('ptitle').textContent=title+' — '+pn;
   document.getElementById('pmo').classList.add('on');
   document.getElementById('pscroll').scrollTop=0;
+}
+function submitKey(){
+  var k = document.getElementById('key-input').value.trim();
+  if(!k || !k.startsWith('sk-')){
+    alert('正しいAPIキーを入力してください（sk- で始まります）');
+    return;
+  }
+  saveKey(k);
+  document.getElementById('key-modal').style.display = 'none';
+  showSb('✓ APIキーを保存しました', true);
+}
+function checkKey(){
+  if(!getKey()){
+    document.getElementById('key-modal').style.display = 'flex';
+  }
+}
+// ページ読み込み時にキーチェック
+window.addEventListener('load', function(){ checkKey(); });
+// Enterキーで送信
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Enter' && document.getElementById('key-modal').style.display !== 'none'){
+    submitKey();
+  }
+});
+
+function showKeyModal(){
+  var existing=getKey();
+  var inp=document.getElementById('ki');
+  if(inp && existing) inp.value=existing;
+  document.getElementById('kmodal').style.display='flex';
+}
+function saveKey(){
+  var k = document.getElementById('kinput').value.trim();
+  if(!k || !k.startsWith('sk-ant-')){
+    alert('正しいAPIキーを入力してください（sk-ant-... で始まるもの）');
+    return;
+  }
+  localStorage.setItem('vc_key', k);
+  document.getElementById('kbar').style.display = 'none';
+  document.getElementById('ksaved').style.display = 'block';
+  setTimeout(function(){ document.getElementById('ksaved').style.display='none'; }, 3000);
 }
 </script>
 </body>
