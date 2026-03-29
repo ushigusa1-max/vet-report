@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>画像アップロードテスト</title>
+</head>
+<body style="padding:20px;font-family:sans-serif">
+<h2>画像アップロードテスト</h2>
+
+<p>以下のボタンをタップして画像を選択してください：</p>
+
+<!-- 方法1: 通常のinput -->
+<div style="margin:20px 0;padding:15px;border:2px solid blue;border-radius:8px">
+  <p><strong>方法1: 通常のinput</strong></p>
+  <input type="file" id="m1" accept="image/*" multiple onchange="show('m1',this.files)">
+</div>
+
+<!-- 方法2: labelでinputをラップ -->
+<div style="margin:20px 0;padding:15px;border:2px solid green;border-radius:8px">
+  <p><strong>方法2: labelボタン</strong></p>
+  <label style="display:inline-block;padding:12px 24px;background:green;color:white;border-radius:8px;cursor:pointer;font-size:16px">
+    📷 画像を選択
+    <input type="file" id="m2" accept="image/*" multiple style="display:none" onchange="show('m2',this.files)">
+  </label>
+</div>
+
+<!-- 方法3: buttonでclick() -->
+<div style="margin:20px 0;padding:15px;border:2px solid red;border-radius:8px">
+  <p><strong>方法3: buttonでclick()</strong></p>
+  <input type="file" id="m3" accept="image/*" multiple style="display:none" onchange="show('m3',this.files)">
+  <button onclick="document.getElementById('m3').click()" style="padding:12px 24px;background:red;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer">📷 画像を選択</button>
+</div>
+
+<div id="result" style="margin-top:20px;padding:15px;background:#f0f0f0;border-radius:8px;min-height:60px">
+  結果がここに表示されます
+</div>
+
+<script>
+function show(method, files){
+  var r=document.getElementById('result');
+  if(files.length===0){r.textContent='ファイルが選択されませんでした';return;}
+  var names=Array.from(files).map(function(f){return f.name+'('+Math.round(f.size/1024)+'KB)';});
+  r.innerHTML='<strong>方法'+method+'で成功！</strong><br>'+names.join('<br>');
+  r.style.background='#d0ffd0';
+}
+</script>
+</body>
+</html>
