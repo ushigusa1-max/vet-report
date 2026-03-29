@@ -146,27 +146,28 @@ body{font-family:"Noto Sans JP",sans-serif;background:#0d1b2a;margin:0;padding:0
 var imgs = [], ad = {vet:'', own:''};
 document.getElementById('examDate').value = new Date().toISOString().split('T')[0];
 
-// ===== テストページと全く同じファイル入力処理 =====
+// ===== デバッグテストで動作確認済みの実装 =====
 function onFileChange(input) {
   var files = input.files;
   if (!files || !files.length) return;
   var pending = files.length;
   for (var i = 0; i < files.length; i++) {
     (function(f) {
-      if (!f.type.startsWith('image/')) { pending--; return; }
+      if (!f.type.startsWith('image/')) { if(--pending<=0) doReadInfo(); return; }
       var reader = new FileReader();
       reader.onload = function(e) {
         imgs.push({name: f.name, data: e.target.result, type: f.type});
         renderImgs();
-        pending--;
-        if (pending <= 0) doReadInfo();
+        if (--pending <= 0) doReadInfo();
       };
-      reader.onerror = function() { pending--; };
+      reader.onerror = function() {
+        if (--pending <= 0) doReadInfo();
+      };
       reader.readAsDataURL(f);
     })(files[i]);
   }
 }
-// ===== ここまでテストページと同じ =====
+// ===== ここまで =====
 
 function renderImgs() {
   var pvw = document.getElementById('pvw');
