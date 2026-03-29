@@ -105,7 +105,7 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--deep);color:var(--te
   <div class="hico">🔬</div>
   <div class="htxt"><h1>AI 診断レポート生成</h1><p>Kannai Animal Clinic</p></div>
 </header>
-
+</div>
 <main class="main">
   <div class="card">
     <div class="ct"><div class="ci">📋</div>患者・来院情報</div>
@@ -249,18 +249,30 @@ function applyInfo(info){
   if(info.gender){var sg=document.getElementById('gender');var og=Array.from(sg.options).find(function(o){return info.gender.includes(o.value.substring(0,2));});if(og)sg.value=og.value;}
   return filled;
 }
+function getKey(){return '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';}
 function callAPI(messages,maxTokens,cb){
+  var key=getKey();
+  if(!key){
+    cb(null,'APIキーが設定されていません。画面上部の「APIキー設定」から入力してください。');
+    return;
+  }
   var ctrl=new AbortController();
-  var t=setTimeout(function(){ctrl.abort();},55000); // 55秒タイムアウト
+  var t=setTimeout(function(){ctrl.abort();},55000);
   fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',headers:{'Content-Type':'application/json'},
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens||4000,messages:messages}),
     signal:ctrl.signal
-  }).then(function(r){clearTimeout(t);return r.json();}).then(function(d){
+  }).then(function(r){
+    clearTimeout(t);
+    if(!r.ok){return r.text().then(function(t2){throw new Error('HTTP '+r.status+': '+t2.substring(0,200));});}
+    return r.json();
+  }).then(function(d){
     if(d.error)cb(null,'['+d.error.type+']: '+d.error.message);
     else cb((d.content||[]).map(function(b){return b.text||'';}).join(''));
   }).catch(function(e){clearTimeout(t);cb(null,e.name==='AbortError'?'タイムアウト(55秒)':e.message);});
 }
+
 function imgBlocks(){
   return imgs.map(function(img){return {type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}};});
 }
@@ -303,7 +315,13 @@ function startAnalysis(){
   if(!imgs.length&&!gv('chief')){alert('検査画像をアップロードするか、主訴を入力してください。');return;}
   var btn=document.getElementById('abt');btn.disabled=true;
   document.getElementById('ld').classList.add('on');document.getElementById('rs').classList.remove('on');
-  function fail(msg){document.getElementById('ld').classList.remove('on');btn.disabled=false;showSb('❌ '+msg,false);}
+  function fail(msg){
+  document.getElementById('ld').classList.remove('on');
+  btn.disabled=false;
+  showSb('❌ '+msg,false);
+  // エラー詳細をローディング画面にも表示
+  document.getElementById('lst').textContent='エラー: '+msg;
+}
   var pn=gv('petName')||'患者',sp=gv('species'),br=gv('breed'),ag=gv('age'),gn=gv('gender'),wt=gv('weight'),ow=gv('ownerName'),ed=gv('examDate'),vn=gv('vetName'),ch=gv('chief'),hi=gv('history');
   var pi='患者名: '+pn+'\n動物種/品種: '+sp+' '+br+'\n年齢: '+ag+' / 性別: '+gn+' / 体重: '+wt+'kg\nオーナー: '+ow+'\n検査日: '+ed+'\n担当: '+vn+'\n主訴: '+ch+'\n既往歴: '+(hi||'なし')+'\n画像数: '+imgs.length+'枚';
   var vtP='ベテラン獣医師のAIアシスタントとして、以下の患者情報と検査画像を解析し獣医師用診断レポートを日本語で作成してください。\n\n患者情報\n'+pi+'\n\n【1. 検査結果サマリー】\n各検査項目の数値と正常値を比較し異常値を明確に示す。表形式で整理すること。\n\n【2. 主要所見の評価】\n異常値の臨床的意義を詳細に解説。\n\n【3. 鑑別診断リスト（優先度順）】\n・第1候補: 病名、根拠、確率\n・第2候補: 病名、根拠\n・第3候補: 病名、根拠\n・除外すべき疾患\n\n【4. 次に推奨する検査（優先順）】\n① 最優先検査: 検査名、理由、コスト・緊急度\n② 第2優先検査\n③ 第3優先検査\n\n【5. 治療方針の暫定提案】\n\n【6. モニタリング計画】\n\n【7. クライアントへの説明ポイント（5分版）】\n\n国内外の獣医療・人医療の最新エビデンスを参照し包括的に評価してください。';
