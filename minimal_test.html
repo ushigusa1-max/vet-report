@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>最小テスト</title>
+</head>
+<body style="padding:20px;font-family:sans-serif">
+<h2>最小テスト</h2>
+
+<input type="file" id="fi" accept="image/*" multiple onchange="handleFiles(this.files)" 
+  style="width:100%;padding:10px;border:2px solid #ccc;border-radius:8px;font-size:14px">
+
+<div id="result" style="margin-top:20px;padding:15px;background:#f0f0f0;border-radius:8px;min-height:60px">
+  ここに結果が表示されます
+</div>
+
+<div id="preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+
+<script>
+function handleFiles(files) {
+  document.getElementById('result').textContent = files.length + '枚選択されました';
+  document.getElementById('result').style.background = '#d0ffd0';
+  
+  Array.from(files).forEach(function(f) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'width:100px;height:100px;object-fit:cover;border-radius:8px';
+      document.getElementById('preview').appendChild(img);
+    };
+    reader.readAsDataURL(f);
+  });
+}
+</script>
+</body>
+</html>
