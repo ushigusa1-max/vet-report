@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>デバッグテスト3</title>
+<style>
+.pitem{position:relative;width:90px;height:68px;border-radius:6px;overflow:hidden;border:2px solid #ddd8ce;display:inline-block;margin:4px}
+.pitem img{width:100%;height:100%;object-fit:cover}
+.pitem .dx{position:absolute;top:2px;right:2px;width:20px;height:20px;background:rgba(180,60,60,.9);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0}
+</style>
+</head>
+<body style="padding:20px;font-family:sans-serif;background:#f0f0f0">
+<h2>デバッグテスト3（本アプリJS全体）</h2>
+
+<div id="log" style="background:white;padding:15px;border-radius:8px;margin-bottom:15px;font-size:11px;font-family:monospace;white-space:pre-wrap;max-height:200px;overflow-y:auto">ログ:
+</div>
+
+<input type="file" id="fi" accept="image/*" multiple onchange="onFileChange(this)" 
+  style="width:100%;padding:10px;border:2px solid #1b7a6e;border-radius:8px;font-size:14px;background:white;margin-bottom:10px">
+
+<div id="pvw" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+<div id="rdwrap" style="display:none;margin-top:9px"><button id="rdbtn">🔍 読み取る</button></div>
+<div id="ntc" style="display:none;margin-top:8px;padding:8px;background:#e8f8f0;border-radius:6px;font-size:12px"></div>
+
+<!-- 本アプリに必要な要素（エラー防止） -->
+<input type="date" id="examDate" style="display:none">
+<input id="petName" style="display:none"><input id="species" style="display:none">
+<input id="breed" style="display:none"><input id="age" style="display:none">
+<input id="gender" style="display:none"><input id="weight" style="display:none">
+<input id="ownerName" style="display:none"><input id="vetName" style="display:none">
+<textarea id="chief" style="display:none"></textarea><textarea id="history" style="display:none"></textarea>
+<div id="abt" style="display:none"></div>
+<div id="ld" style="display:none"></div><div id="lst" style="display:none"></div>
+<div id="rs" style="display:none"></div><div id="rmt" style="display:none"></div>
+<div id="vb" style="display:none"></div><div id="ob" style="display:none"></div>
+<div id="sb" style="display:none"></div>
+<div id="pmo" style="display:none"></div><div id="ptitle" style="display:none"></div>
+<div id="pbody" style="display:none"></div><div id="pscroll" style="display:none"></div>
+<div id="kmo" style="display:none"></div><div id="ki" style="display:none"></div>
+<div id="kerr" style="display:none"></div>
+<div id="tv" style="display:none"></div><div id="to" style="display:none"></div>
+
+<script>
+// グローバルエラーハンドラー
+window.onerror = function(msg, src, line, col, err) {
+  document.getElementById('log').textContent += 'JSエラー: ' + msg + ' (行' + line + ')\n';
+  return false;
+};
+
+function log(msg) {
+  var el = document.getElementById('log');
+  el.textContent += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+log('ページ読み込み開始');
+
+try {
+
+var imgs = [], ad = {vet:'', own:''};
+document.getElementById('examDate').value = new Date().toISOString().split('T')[0];
+
+// ===== デバッグテストで動作確認済みの実装 =====
+function onFileChange(input) {
+  var files = input.files;
+  if (!files || !files.length) return;
+  var pending = files.length;
+  for (var i = 0; i < files.length; i++) {
+    (function(f) {
+      if (!f.type.startsWith('image/')) { if(--pending<=0) doReadInfo(); return; }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        imgs.push({name: f.name, data: e.target.result, type: f.type});
+        renderImgs();
+        if (--pending <= 0) doReadInfo();
+      };
+      reader.onerror = function() {
+        if (--pending <= 0) doReadInfo();
+      };
+      reader.readAsDataURL(f);
+    })(files[i]);
+  }
+}
+// ===== ここまで =====
+
+function renderImgs() {
+  var pvw = document.getElementById('pvw');
+  pvw.innerHTML = '';
+  for (var i = 0; i < imgs.length; i++) {
+    var div = document.createElement('div');
+    div.className = 'pitem';
+    var img = document.createElement('img');
+    img.src = imgs[i].data;
+    var btn = document.createElement('button');
+    btn.className = 'dx';
+    btn.textContent = '✕';
+    btn.onclick = (function(idx){ return function(){ imgs.splice(idx,1); renderImgs(); }; })(i);
+    div.appendChild(img);
+    div.appendChild(btn);
+    pvw.appendChild(div);
+  }
+  document.getElementById('rdwrap').style.display = imgs.length ? 'block' : 'none';
+}
+
+function stab(t) {
+  document.querySelectorAll('.tab').forEach(function(el,i){ el.classList.toggle('on',(i===0&&t==='vet')||(i===1&&t==='own')); });
+  document.querySelectorAll('.tc').forEach(function(c){ c.classList.remove('on'); });
+  document.getElementById(t==='vet'?'tv':'to').classList.add('on');
+}
+function gv(id){ var el=document.getElementById(id); return el?el.value:''; }
+function showNt(msg){ var n=document.getElementById('ntc'); n.textContent=msg; n.classList.add('on'); }
+function showSb(msg,ok){ var b=document.getElementById('sb'); b.textContent=msg; b.className='sb on '+(ok?'ok':'er'); }
+
+function getKey(){ return localStorage.getItem('vc_key')||''; }
+function saveKey(){
+  var k=document.getElementById('ki').value.trim();
+  if(!k.startsWith('sk-ant-')){ document.getElementById('kerr').style.display='block'; return; }
+  localStorage.setItem('vc_key',k);
+  document.getElementById('kmo').classList.remove('on');
+  document.getElementById('kerr').style.display='none';
+  showSb('✓ APIキーを保存しました。',true);
+}
+
+function applyInfo(info){
+  var map={petName:'患者名',breed:'品種',age:'年齢',weight:'体重',ownerName:'オーナー',vetName:'担当医',chief:'主訴',history:'既往歴'};
+  var filled=[];
+  Object.keys(map).forEach(function(f){ var el=document.getElementById(f); if(el&&info[f]&&info[f].trim()){el.value=info[f];filled.push(map[f]);} });
+  if(info.examDate) document.getElementById('examDate').value=info.examDate;
+  if(info.species){var s=document.getElementById('species');var o=Array.from(s.options).find(function(o){return o.value===info.species||info.species.includes(o.value);});if(o)s.value=o.value;}
+  if(info.gender){var sg=document.getElementById('gender');var og=Array.from(sg.options).find(function(o){return info.gender.includes(o.value.substring(0,2));});if(og)sg.value=og.value;}
+  return filled;
+}
+
+function imgBlocks(){
+  return imgs.map(function(img){ return {type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}}; });
+}
+
+function resizeBlocks(cb){
+  if(!imgs.length){cb([]);return;}
+  var res=new Array(imgs.length),done=0;
+  imgs.forEach(function(img,i){
+    var im=new Image();
+    im.onload=function(){
+      var W=im.width,H=im.height,MAX=1568;
+      if(W<=MAX&&H<=MAX){res[i]={type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}};if(++done===imgs.length)cb(res);return;}
+      var s=Math.min(MAX/W,MAX/H);var cv=document.createElement('canvas');cv.width=Math.round(W*s);cv.height=Math.round(H*s);
+      cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);var rd=cv.toDataURL('image/jpeg',.85);
+      res[i]={type:'image',source:{type:'base64',media_type:'image/jpeg',data:rd.split(',')[1]}};
+      if(++done===imgs.length)cb(res);
+    };
+    im.onerror=function(){res[i]={type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}};if(++done===imgs.length)cb(res);};
+    im.src=img.data;
+  });
+}
+
+function callAPI(messages,maxTokens,cb){
+  var key=getKey();
+  if(!key){ document.getElementById('kmo').classList.add('on'); cb(null,'APIキーが未設定です。'); return; }
+  var ctrl=new AbortController();
+  var tid=setTimeout(function(){ ctrl.abort(); },60000);
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens||4000,messages:messages}),
+    signal:ctrl.signal
+  }).then(function(r){clearTimeout(tid);return r.json();}).then(function(d){
+    if(d.error){
+      var msg=d.error.message;
+      if(d.error.type==='authentication_error'){msg='APIキーが無効です。🔑から再入力してください。';document.getElementById('kmo').classList.add('on');}
+      cb(null,msg);
+    }else{ cb((d.content||[]).map(function(b){return b.text||'';}).join('')); }
+  }).catch(function(e){ clearTimeout(tid); cb(null,e.name==='AbortError'?'タイムアウトしました。':e.message); });
+}
+
+function doReadInfo(){
+  if(!imgs.length)return;
+  var btn=document.getElementById('rdbtn'),abt=document.getElementById('abt');
+  btn.disabled=true;btn.textContent='⏳ 読み取り中...';abt.disabled=true;
+  showNt('🔍 画像から患者情報を読み取り中...');
+  var done=false;
+  var timer=setTimeout(function(){ if(done)return;done=true;btn.disabled=false;btn.textContent='🔍 再度読み取る';abt.disabled=false;showNt('⚠️ タイムアウト。手動で入力してください。'); },25000);
+  callAPI([{role:'user',content:imgBlocks().concat([{type:'text',text:'この画像から患者情報を読み取り、以下のJSONのみで返答:
+{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}
+examDateはYYYY-MM-DD形式。JSONのみ。'}])}],1000,function(txt,err){
+    if(done)return;done=true;clearTimeout(timer);
+    if(!err&&txt){try{var m=txt.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);if(m){var filled=applyInfo(JSON.parse(m[0]));showNt(filled.length?'✓ 読み取り完了: '+filled.join('・')+' を入力しました。':'⚠️ 読み取れませんでした。手動で入力してください。');}else{showNt('⚠️ 読み取りに失敗。手動で入力してください。');}}catch(e){showNt('⚠️ 読み取りに失敗。手動で入力してください。');}}
+    else{showNt('⚠️ 自動読み取りに失敗。手動で入力してください。');}
+    btn.disabled=false;btn.textContent='🔍 再度読み取る';abt.disabled=false;
+  });
+}
+
+function startAnalysis(){
+  if(!imgs.length&&!gv('chief')){ showSb('検査画像をアップロードするか、主訴を入力してください。',false);return; }
+  var btn=document.getElementById('abt');btn.disabled=true;
+  document.getElementById('ld').classList.add('on');document.getElementById('rs').classList.remove('on');
+  function fail(msg){document.getElementById('ld').classList.remove('on');btn.disabled=false;showSb('❌ '+msg,false);}
+  var pn=gv('petName')||'患者',sp=gv('species'),br=gv('breed'),ag=gv('age'),gn=gv('gender'),wt=gv('weight'),ow=gv('ownerName'),ed=gv('examDate'),vn=gv('vetName'),ch=gv('chief'),hi=gv('history');
+  var pi='患者名: '+pn+'\n動物種: '+sp+'('+br+')\n年齢: '+ag+' 性別: '+gn+' 体重: '+wt+'kg\nオーナー: '+ow+'\n検査日: '+ed+'\n担当: '+vn+'\n主訴: '+ch+'\n既往歴: '+(hi||'なし');
+  document.getElementById('lst').textContent='画像を準備中...';
+  resizeBlocks(function(iblocks){
+    document.getElementById('lst').textContent='獣医師用レポートを生成中...';
+    var vtP='ベテラン獣医師のAIアシスタントとして、以下の患者情報と検査画像を解析し獣医師用診断レポートを日本語で作成してください。\n\n患者情報\n'+pi+'\n\n【1. 検査結果サマリー】各検査項目を表形式で整理。異常値を明確に示す。\n\n【2. 主要所見の評価】異常値の臨床的意義を詳細に解説。\n\n【3. 鑑別診断リスト（優先度順）】・第1候補: 病名、根拠、確率\n・第2候補\n・第3候補\n・除外すべき疾患\n\n【4. 次に推奨する検査】① 最優先: 検査名、理由、コスト・緊急度\n② 第2優先\n③ 第3優先\n\n【5. 治療方針の暫定提案】\n\n【6. モニタリング計画】\n\n【7. クライアントへの説明ポイント（5分版）】';
+    callAPI([{role:'user',content:iblocks.concat([{type:'text',text:vtP}])}],4000,function(vt,err1){
+      if(err1||!vt){fail('獣医師用レポート生成に失敗: '+(err1||'空のレスポンス'));return;}
+      ad.vet=vt;document.getElementById('lst').textContent='オーナー向け資料を生成中...';
+      var otP='関内どうぶつクリニックの獣医師AIアシスタントとして飼い主様向け説明資料を日本語で作成してください。\n\n患者情報\n'+pi+'\n\n【今日の検査について】\n【検査結果のわかりやすいまとめ】項目名|結果|基準値|状態\n【現在の状態について】\n【考えられる原因】\n【次のステップ】\n【ご自宅での注意事項】\n【よくあるご質問(Q&A)】Q1〜Q5\n【次回来院の目安】\n最後に温かみのある一言で。';
+      callAPI([{role:'user',content:[{type:'text',text:otP+'\n\n参考(獣医師向け分析)\n'+vt.substring(0,2000)}]}],4000,function(ot,err2){
+        if(err2||!ot){fail('オーナー向け資料生成に失敗: '+(err2||'空のレスポンス'));return;}
+        ad.own=ot;
+        document.getElementById('vb').textContent=vt;document.getElementById('ob').textContent=ot;
+        document.getElementById('rmt').textContent='生成日時: '+new Date().toLocaleString('ja-JP')+'　患者: '+pn;
+        document.getElementById('ld').classList.remove('on');document.getElementById('rs').classList.add('on');
+        document.getElementById('rs').scrollIntoView({behavior:'smooth'});btn.disabled=false;
+      });
+    });
+  });
+}
+
+function clean(s){return s.replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1').replace(/`/g,'').replace(/^#+\s*/,'').trim();}
+function md2html(text,ac,hc){
+  var lines=text.split('\n'),out='',rows=[],inT=false;
+  function flush(){if(!rows.length)return;var t='<table style="width:100%;border-collapse:collapse;margin:2mm 0;font-size:8.5pt">';rows.forEach(function(row,ri){t+='<tr>';row.forEach(function(cell){t+=ri===0?'<th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:left">'+cell+'</th>':'<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4">'+cell+'</td>';});t+='</tr>';});out+=t+'</table>';rows=[];inT=false;}
+  lines.forEach(function(line){
+    var s=line.trim();
+    if(s.startsWith('|')){inT=true;var c=s.split('|').slice(1,-1).map(function(c){return clean(c.trim());});if(!c.every(function(c){return /^[-: ]+$/.test(c);}))rows.push(c);return;}
+    if(inT)flush();
+    if(s.startsWith('【')&&s.includes('】')){out+='<div style="background:'+ac+';color:white;padding:2.5mm 4mm;margin:4mm 0 3mm;font-size:10pt;font-weight:bold;border-radius:2mm">'+clean(s)+'</div>';}
+    else if(/^#{1,3}\s/.test(s)){out+='<div style="background:#e8f0f8;border-left:3px solid '+ac+';padding:2mm 3mm;margin:3mm 0 2mm;font-size:9pt;font-weight:bold">'+clean(s)+'</div>';}
+    else if(s===''||s==='---'){out+='<div style="height:2mm"></div>';}
+    else if(/^Q\d*[：:]/.test(s)){out+='<div style="font-weight:bold;color:'+hc+';margin-top:3mm;font-size:8.5pt">'+clean(s)+'</div>';}
+    else if(/^A\d*[：:]/.test(s)){out+='<div style="color:#2d5a3d;padding-left:4mm;font-size:8.5pt">'+clean(s)+'</div>';}
+    else if(/^[・①②③④⑤⑥⑦⑧⑨]/.test(s)||/^\d+[.、]/.test(s)){out+='<div style="padding-left:4mm;font-size:8.5pt">'+clean(s)+'</div>';}
+    else{out+='<div style="font-size:8.5pt;margin:1mm 0">'+clean(s)+'</div>';}
+  });
+  if(inT)flush();return out;
+}
+
+function showPrev(type){
+  var isVet=(type==='vet'),content=isVet?ad.vet:ad.own;
+  if(!content){showSb('先にAI解析を実行してください。',false);return;}
+  var pn=gv('petName')||'患者',sp=gv('species'),br=gv('breed'),ag=gv('age'),gn=gv('gender'),wt=gv('weight'),ow=gv('ownerName'),ed=gv('examDate'),vn=gv('vetName'),ch=gv('chief');
+  var now=new Date().toLocaleString('ja-JP');
+  var hc=isVet?'#1a2e45':'#7a5200',ac=isVet?'#1b7a6e':'#9a6800';
+  var title=isVet?'診断レポート（獣医師用）':'検査結果のご説明（オーナー様用）';
+  var conf=isVet?'<span style="background:#cc3333;color:white;font-size:7pt;padding:2px 8px;border-radius:3px;float:right">スタッフ専用</span>':'';
+  var fconf=isVet?'<span style="color:#cc3333;font-weight:bold">【社内限・部外秘】</span>':'<span></span>';
+  document.getElementById('pbody').innerHTML=
+    '<div style="background:'+hc+';color:white;padding:10mm 14mm 8mm;position:relative">'+conf+
+    '<div style="font-size:8pt;color:#c8a96e;margin-bottom:2mm">関内どうぶつクリニック　Kannai Animal Clinic</div>'+
+    '<div style="font-size:16pt;font-weight:bold;margin-bottom:2mm">'+title+'</div>'+
+    '<div style="font-size:7pt;color:#aaa">生成日時: '+now+'</div></div>'+
+    '<div style="margin:5mm 14mm;padding:4mm;background:#f4f7fb;border:1px solid #c0cfe0;border-radius:3mm">'+
+    '<div style="font-size:7pt;font-weight:bold;color:'+hc+';margin-bottom:2mm;text-transform:uppercase">患者情報</div>'+
+    '<div style="font-size:8.5pt;margin:1mm 0">患者名: <strong>'+pn+'</strong>　動物種: '+sp+'（'+br+'）　年齢: '+ag+'　性別: '+gn+'　体重: '+wt+'kg</div>'+
+    '<div style="font-size:8.5pt;margin:1mm 0">オーナー: '+ow+'　　検査日: '+ed+'　　担当: '+vn+'</div></div>'+
+    (ch?'<div style="margin:0 14mm 3mm;padding:2mm 3mm 2mm 7mm;border-left:3px solid '+ac+';background:#f8fbf9;font-size:8.5pt"><strong>主訴:</strong> '+ch+'</div>':'')+
+    '<div style="padding:2mm 14mm 12mm">'+md2html(content,ac,hc)+'</div>'+
+    '<div style="border-top:1px solid #e0ddd8;padding:2.5mm 14mm;display:flex;justify-content:space-between;font-size:7pt;color:#888">'+
+    '<span>関内どうぶつクリニック　〒231-0023　横浜市中区</span>'+fconf+'<span>'+pn+'　'+ed+'</span></div>';
+  document.getElementById('ptitle').textContent=title+' — '+pn;
+  document.getElementById('pmo').classList.add('on');
+  document.getElementById('pscroll').scrollTop=0;
+}
+
+  log('JS初期化完了');
+} catch(e) {
+  log('初期化エラー: ' + e.message + ' (line: ' + e.lineNumber + ')');
+}
+
+log('セットアップ完了');
+</script>
+</body>
+</html>
