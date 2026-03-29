@@ -265,7 +265,7 @@ function doReadInfo(){
   showNt('🔍 画像から患者情報を読み取り中...');
   var done=false;
   var timer=setTimeout(function(){ if(done)return;done=true;btn.disabled=false;btn.textContent='🔍 再度読み取る';abt.disabled=false;showNt('⚠️ タイムアウト。手動で入力してください。'); },25000);
-  callAPI([{role:'user',content:imgBlocks().concat([{type:'text',text:'この画像から患者情報を読み取り、JSONのみで返答:\n{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}\nexamDateはYYYY-MM-DD形式。JSONのみ。'}])}],1000,function(txt,err){
+  callAPI([{role:'user',content:imgBlocks().concat([{type:'text',text:'あなたは動物病院の検査結果票・カルテの文字認識の専門家です。添付画像から以下の患者情報を丁寧に読み取ってください。\n\n【読み取り項目】\n1. petName: ペットの名前（カタカナ/ひらがな/漢字/英字）\n2. species: 動物種（犬/猫/うさぎ/鳥/その他）\n3. breed: 品種（例:トイプードル、柴犬）\n4. age: 年齢（例:6歳、2歳3ヶ月）\n5. gender: 性別（雄/雌/去勢済/避妊済）\n6. weight: 体重（kg数値のみ）\n7. ownerName: 飼い主の名前\n8. examDate: 検査日（YYYY-MM-DD形式）\n9. vetName: 担当獣医師名\n10. chief: 主訴・来院理由・症状\n11. history: 既往歴・投薬歴\n\n読み取れない項目は空文字にしてください。\n以下のJSONのみで返答（説明文・コードブロック不要）:\n{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}'}])}],1500,function(txt,err){
     if(done)return;done=true;clearTimeout(timer);
     if(!err&&txt){try{var m=txt.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);if(m){var filled=applyInfo(JSON.parse(m[0]));showNt(filled.length?'✓ 読み取り完了: '+filled.join('・')+' を入力しました。':'⚠️ 読み取れませんでした。手動で入力してください。');}else{showNt('⚠️ 読み取りに失敗。手動で入力してください。');}}catch(e){showNt('⚠️ 読み取りに失敗。手動で入力してください。');}}
     else{showNt('⚠️ 自動読み取りに失敗。手動で入力してください。');}
