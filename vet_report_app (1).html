@@ -333,74 +333,82 @@ function doReadInfo(){
   if(!imgs.length)return;
   var btn=document.getElementById('rdbtn'),abt=document.getElementById('abt');
   btn.disabled=true;btn.textContent='⏳ 読み取り中...';
+  abt.disabled=true;
   showNt('🔍 画像から患者情報を読み取り中...');
 
-  var prompt='あなたは動物病院の検査結果票・カルテの文字認識の専門家です。
-'+
-    '添付画像（血液検査表・診察券・カルテ・検査結果票など）から以下の患者情報を読み取ってください。
-
-'+
-    '【読み取りのポイント】
-'+
-    '- 患者名（ペットの名前）：カタカナ・ひらがな・漢字・アルファベット
-'+
-    '- 動物種：犬・猫・うさぎ・鳥・その他
-'+
-    '- 品種：トイプードル・柴犬・アメリカンショートヘアなど
-'+
-    '- 年齢：「6歳」「2歳3ヶ月」など
-'+
-    '- 性別：雄・雌・オス・メス・M・F・去勢・避妊の記載を探す
-'+
-    '- 体重：kg単位の数値
-'+
-    '- オーナー名（飼い主様の名前）：「様」「オーナー」の近くにある人名
-'+
-    '- 検査日・来院日：日付
-'+
-    '- 担当獣医師名：「担当」「Dr.」の近くにある名前
-'+
-    '- 主訴：来院理由・症状
-'+
-    '- 既往歴：過去の病歴・投薬歴
-
-'+
-    '以下のJSON形式のみで返答してください（前置き・説明・コードブロック不要）:
-'+
-    '{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}
-
-'+
-    '- 読み取れない項目は空文字にする
-'+
-    '- examDateはYYYY-MM-DD形式
-'+
-    '- weightは数値のみ（単位不要）
-'+
-    '- JSONのみ返答';
-
-  // 画像をリサイズしてから送信（精度向上）
+  // 全画像をリサイズして送信
   resizeBlocks(function(iblocks){
-    callAPI([{role:'user',content:iblocks.concat([{type:'text',text:prompt}])}],1000,function(txt,err){
-      if(!err&&txt){
-        try{
-          var clean=txt.replace(/```json|```/g,'').trim();
-          // JSONの開始・終了を確実に抽出
-          var start=clean.indexOf('{');
-          var end=clean.lastIndexOf('}');
-          if(start>=0&&end>=0) clean=clean.substring(start,end+1);
-          var info=JSON.parse(clean);
-          var filled=applyInfo(info);
-          showNt(filled.length
-            ?'✓ 読み取り完了: '+filled.join('・')+' を入力しました。内容を確認して必要に応じて修正してください。'
-            :'⚠️ 患者情報を読み取れませんでした。手動で入力してください。');
-        }catch(e){
-          showNt('⚠️ 読み取り結果の解析に失敗しました。手動で入力してください。');
+    var prompt=
+      '動物病院の検査票・カルテ・診察券の画像です。以下の患者情報を丁寧に読み取ってください。
+
+'+
+      '【必ず探す項目】
+'+
+      '1. petName: ペットの名前（カタカナ/ひらがな/漢字/英字）
+'+
+      '2. species: 動物種（犬/猫/うさぎ/鳥/その他）
+'+
+      '3. breed: 品種（例:トイプードル、柴犬、アメショー）
+'+
+      '4. age: 年齢（例:6歳、2歳3ヶ月）
+'+
+      '5. gender: 性別（雄/雌/去勢済/避妊済）
+'+
+      '6. weight: 体重（kg数値のみ、例:5.2）
+'+
+      '7. ownerName: 飼い主の名前（様/オーナー近くの人名）
+'+
+      '8. examDate: 検査日（YYYY-MM-DD形式）
+'+
+      '9. vetName: 担当獣医師名
+'+
+      '10. chief: 主訴・来院理由・症状
+'+
+      '11. history: 既往歴・投薬歴
+
+'+
+      '【注意】
+'+
+      '- 読み取れない項目は空文字にする
+'+
+      '- 数値の単位は除いて数値のみ（体重はkgを除く）
+'+
+      '- 日付はYYYY-MM-DD形式
+'+
+      '- JSONのみ返答（説明文・コードブロック不要）
+
+'+
+      '{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}';
+
+    callAPI(
+      [{role:'user',content:iblocks.concat([{type:'text',text:prompt}])}],
+      1500,
+      function(txt,err){
+        if(!err&&txt){
+          try{
+            var clean=txt.replace(/```json|```/g,'').trim();
+            // JSON部分だけ抽出
+            var jsonMatch=clean.match(/\{[\s\S]*\}/);
+            if(jsonMatch){
+              var info=JSON.parse(jsonMatch[0]);
+              var filled=applyInfo(info);
+              showNt(filled.length
+                ? '✓ 読み取り完了: '+filled.join('・')+' を入力しました。修正が必要な場合は直接編集してください。'
+                : '⚠️ 画像から患者情報を読み取れませんでした。手動で入力してください。');
+            } else {
+              showNt('⚠️ 読み取り結果の解析に失敗しました。手動で入力してください。');
+            }
+          }catch(e){
+            showNt('⚠️ 読み取りに失敗しました。手動で入力してください。');
+          }
+        } else {
+          showNt('⚠️ 自動読み取りに失敗しました。手動で入力してください。解析は通常通り実行できます。');
         }
-      } else {
-        showNt('⚠️ 自動読み取りに失敗しました。手動で入力してください。');
+        btn.disabled=false;
+        btn.textContent='🔍 再度読み取る';
+        abt.disabled=false;
       }
-      btn.disabled=false;btn.textContent='🔍 再度読み取る';abt.disabled=false;
-    });
+    );
   });
 }
 function startAnalysis(){
