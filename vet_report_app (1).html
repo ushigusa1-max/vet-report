@@ -265,9 +265,7 @@ function doReadInfo(){
   showNt('🔍 画像から患者情報を読み取り中...');
   var done=false;
   var timer=setTimeout(function(){ if(done)return;done=true;btn.disabled=false;btn.textContent='🔍 再度読み取る';abt.disabled=false;showNt('⚠️ タイムアウト。手動で入力してください。'); },25000);
-  callAPI([{role:'user',content:imgBlocks().concat([{type:'text',text:'この画像から患者情報を読み取り、以下のJSONのみで返答:
-{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}
-examDateはYYYY-MM-DD形式。JSONのみ。'}])}],1000,function(txt,err){
+  callAPI([{role:'user',content:imgBlocks().concat([{type:'text',text:'この画像から患者情報を読み取り、JSONのみで返答:\n{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}\nexamDateはYYYY-MM-DD形式。JSONのみ。'}])}],1000,function(txt,err){
     if(done)return;done=true;clearTimeout(timer);
     if(!err&&txt){try{var m=txt.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);if(m){var filled=applyInfo(JSON.parse(m[0]));showNt(filled.length?'✓ 読み取り完了: '+filled.join('・')+' を入力しました。':'⚠️ 読み取れませんでした。手動で入力してください。');}else{showNt('⚠️ 読み取りに失敗。手動で入力してください。');}}catch(e){showNt('⚠️ 読み取りに失敗。手動で入力してください。');}}
     else{showNt('⚠️ 自動読み取りに失敗。手動で入力してください。');}
