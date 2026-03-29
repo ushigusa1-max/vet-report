@@ -136,7 +136,7 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--deep);color:var(--te
     <div class="ct"><div class="ci">🖼️</div>検査画像のアップロード</div>
     <!-- 方法2: labelでinputをラップ（テストで確実に動作確認済み） -->
     <label for="fi" style="display:block;border:2.5px dashed var(--bd);border-radius:10px;background:white;padding:24px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:9px">
-      <input type="file" id="fi" accept="image/*" multiple style="display:none">
+      <input type="file" id="fi" accept="image/*" multiple style="display:none" onchange="handleFiles(this.files)">
       <div style="font-size:32px;margin-bottom:8px">📷</div>
       <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px">タップして画像を選択</div>
       <div style="font-size:11px;color:var(--muted)">JPG / PNG / HEIC など複数選択可</div>
@@ -207,8 +207,9 @@ function saveKey(){
 // キーが未設定の場合のみ、解析ボタン押下時にモーダル表示（起動時は表示しない）
 
 // ファイル選択 (labelのfor="fi"でも動作、このリスナーでも動作)
-document.getElementById('fi').onchange = function(){
-  var files = Array.from(this.files).filter(function(f){ return f.type.startsWith('image/'); });
+// handleFiles: inputのonchangeから直接呼ばれる
+function handleFiles(fileList){
+  var files = Array.from(fileList).filter(function(f){ return f.type.startsWith('image/'); });
   if(!files.length) return;
   var pending = files.length;
   files.forEach(function(f){
@@ -220,9 +221,9 @@ document.getElementById('fi').onchange = function(){
     };
     reader.readAsDataURL(f);
   });
-  // 同じファイルを再選択できるようvalueをリセット
-  this.value = '';
-};
+  // 同じファイルを再選択できるようリセット
+  document.getElementById('fi').value = '';
+}
 
 function renderImgs(){
   document.getElementById('pvw').innerHTML = imgs.map(function(img, i){
