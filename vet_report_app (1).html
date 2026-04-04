@@ -287,6 +287,8 @@ function callAPI(messages,maxTokens,cb){
 
 function doReadInfo(){
   if(!imgs.length)return;
+  // APIキーがない場合は自動読み取りをスキップ（エラーを出さない）
+  if(!getKey()) return;
   var btn=document.getElementById('rdbtn'),abt=document.getElementById('abt');
   btn.disabled=true;btn.textContent='⏳ 読み取り中...';abt.disabled=true;
   showNt('🔍 画像から患者情報を読み取り中...');
