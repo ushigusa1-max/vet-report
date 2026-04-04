@@ -221,6 +221,33 @@ function imgBlocks(){
   return imgs.map(function(img){ return {type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}}; });
 }
 
+
+function resizeSmall(cb){
+  if(!imgs.length){cb([]);return;}
+  var res=new Array(imgs.length),done=0;
+  imgs.forEach(function(img,i){
+    var im=new Image();
+    im.onload=function(){
+      var W=im.width,H=im.height,MAX=800;
+      if(W<=MAX&&H<=MAX){
+        res[i]={type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}};
+        if(++done===imgs.length)cb(res);return;
+      }
+      var s=Math.min(MAX/W,MAX/H);
+      var cv=document.createElement('canvas');cv.width=Math.round(W*s);cv.height=Math.round(H*s);
+      cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+      var rd=cv.toDataURL('image/jpeg',.7);
+      res[i]={type:'image',source:{type:'base64',media_type:'image/jpeg',data:rd.split(',')[1]}};
+      if(++done===imgs.length)cb(res);
+    };
+    im.onerror=function(){
+      res[i]={type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}};
+      if(++done===imgs.length)cb(res);
+    };
+    im.src=img.data;
+  });
+}
+
 function resizeBlocks(cb){
   if(!imgs.length){cb([]);return;}
   var res=new Array(imgs.length),done=0;
@@ -264,13 +291,13 @@ function doReadInfo(){
   btn.disabled=true;btn.textContent='⏳ 読み取り中...';abt.disabled=true;
   showNt('🔍 画像から患者情報を読み取り中...');
   var done=false;
-  var timer=setTimeout(function(){ if(done)return;done=true;btn.disabled=false;btn.textContent='🔍 再度読み取る';abt.disabled=false;showNt('⚠️ タイムアウト。手動で入力してください。'); },25000);
-  resizeBlocks(function(iblocks){ callAPI([{role:'user',content:iblocks.concat([{type:'text',text:'あなたは動物病院の検査票・カルテの文字認識の専門家です。\n\n【最重要ルール】\n検査票の氏名欄には「苗字(オーナー) ペット名 様」の順で記載されることが多い。\n例: カドノソノ ルーチェ 様 → ownerName=カドノソノ、petName=ルーチェ\n例: タナカ カタクリコ 様 → ownerName=タナカ、petName=カタクリコ\n例: ヒラオ 様 ／ ポポ ちゃん → ownerName=ヒラオ、petName=ポポ\n\n【フォーマット別の見方】\nA. 健康診断報告書: 苗字様=ownerName、名前ちゃん/くん=petName\nB. 検査報告書: 氏名欄の苗字=ownerName、次の名前=petName、種別欄=species\nC. IDEXXタイプ: オーナー欄=ownerName、患者名欄=petName\n\n【各項目の定義】\n- petName: ペットの名前(カタカナ/ひらがな/英字。人間の苗字ではない)\n- ownerName: 飼い主の苗字(漢字。ペット名ではない)\n- species: 犬/猫/うさぎ/鳥/その他\n- breed: 品種(トイプードル/柴犬等。ペット名と混同しない)\n- age: 年齢(例:6歳、15才)\n- gender: 性別(雄/雌/去勢済/避妊済)\n- weight: 体重(kg数値のみ)\n- examDate: 検査日(YYYY-MM-DD形式)\n- vetName: 担当獣医師名\n- chief: 主訴・症状\n- history: 既往歴・投薬歴\n\n読み取れない項目は空文字。JSONのみで返答(説明文不要):\n{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}'}])}],1500,function(txt,err){
+  var timer=setTimeout(function(){ if(done)return;done=true;btn.disabled=false;btn.textContent='🔍 再度読み取る';abt.disabled=false;showNt('⚠️ タイムアウト。手動で入力してください。'); },40000);
+  resizeSmall(function(iblocks){ callAPI([{role:'user',content:iblocks.concat([{type:'text',text:'あなたは動物病院の検査票・カルテの文字認識の専門家です。\n\n【最重要ルール】\n検査票の氏名欄には「苗字(オーナー) ペット名 様」の順で記載されることが多い。\n例: カドノソノ ルーチェ 様 → ownerName=カドノソノ、petName=ルーチェ\n例: タナカ カタクリコ 様 → ownerName=タナカ、petName=カタクリコ\n例: ヒラオ 様 ／ ポポ ちゃん → ownerName=ヒラオ、petName=ポポ\n\n【フォーマット別の見方】\nA. 健康診断報告書: 苗字様=ownerName、名前ちゃん/くん=petName\nB. 検査報告書: 氏名欄の苗字=ownerName、次の名前=petName、種別欄=species\nC. IDEXXタイプ: オーナー欄=ownerName、患者名欄=petName\n\n【各項目の定義】\n- petName: ペットの名前(カタカナ/ひらがな/英字。人間の苗字ではない)\n- ownerName: 飼い主の苗字(漢字。ペット名ではない)\n- species: 犬/猫/うさぎ/鳥/その他\n- breed: 品種(トイプードル/柴犬等。ペット名と混同しない)\n- age: 年齢(例:6歳、15才)\n- gender: 性別(雄/雌/去勢済/避妊済)\n- weight: 体重(kg数値のみ)\n- examDate: 検査日(YYYY-MM-DD形式)\n- vetName: 担当獣医師名\n- chief: 主訴・症状\n- history: 既往歴・投薬歴\n\n読み取れない項目は空文字。JSONのみで返答(説明文不要):\n{"petName":"","species":"","breed":"","age":"","gender":"","weight":"","ownerName":"","examDate":"","vetName":"","chief":"","history":""}'}])}],800,function(txt,err){
     if(done)return;done=true;clearTimeout(timer);
     if(!err&&txt){try{var m=txt.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);if(m){var filled=applyInfo(JSON.parse(m[0]));showNt(filled.length?'✓ 読み取り完了: '+filled.join('・')+' を入力しました。':'⚠️ 読み取れませんでした。手動で入力してください。');}else{showNt('⚠️ 読み取りに失敗。手動で入力してください。');}}catch(e){showNt('⚠️ 読み取りに失敗。手動で入力してください。');}}
     else{showNt('⚠️ 自動読み取りに失敗。手動で入力してください。');}
     btn.disabled=false;btn.textContent='🔍 再度読み取る';abt.disabled=false;
-  }); }); // end callAPI, end resizeBlocks
+  }); }); // end callAPI, end resizeSmall
 }
 
 function startAnalysis(){
