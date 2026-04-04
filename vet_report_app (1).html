@@ -337,7 +337,7 @@ function showPrev(type){
     '<div style="font-size:7pt;font-weight:bold;color:'+hc+';margin-bottom:2mm;text-transform:uppercase">患者情報</div>'+
     '<div style="font-size:8.5pt;margin:1mm 0">患者名: <strong>'+pn+'</strong>　動物種: '+sp+'（'+br+'）　年齢: '+ag+'　性別: '+gn+'　体重: '+wt+'kg</div>'+
     '<div style="font-size:8.5pt;margin:1mm 0">オーナー: '+ow+'　　検査日: '+ed+'　　担当: '+vn+'</div></div>'+
-    (ch?'<div style="margin:0 14mm 3mm;padding:2mm 3mm 2mm 7mm;border-left:3px solid '+ac+';background:#f8fbf9;font-size:8.5pt"><strong>主訴:</strong> '+ch+'</div>':'')+
+    (isVet&&ch?'<div style="margin:0 14mm 3mm;padding:2mm 3mm 2mm 7mm;border-left:3px solid '+ac+';background:#f8fbf9;font-size:8.5pt"><strong>主訴:</strong> '+ch+'</div>':'')+
     '<div style="padding:2mm 14mm 12mm">'+md2html(content,ac,hc)+'</div>'+
     '<div style="border-top:1px solid #e0ddd8;padding:2.5mm 14mm;display:flex;justify-content:space-between;font-size:7pt;color:#888">'+
     '<span>関内どうぶつクリニック　〒231-0023　横浜市中区</span>'+fconf+'<span>'+pn+'　'+ed+'</span></div>';
