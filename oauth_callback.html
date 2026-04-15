@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>認証中...</title></head>
+<body>
+<p style="font-family:sans-serif;text-align:center;margin-top:40px;color:#1a9d8a">Google Drive認証中...</p>
+<script>
+(function(){
+  var hash = location.hash.substring(1);
+  if(!hash) { document.body.innerHTML='<p style="text-align:center;color:#e05050">認証に失敗しました。ウィンドウを閉じてください。</p>'; return; }
+  var params = new URLSearchParams(hash);
+  var token = params.get('access_token');
+  var state = params.get('state') || '';
+  if(token){
+    window.opener && window.opener.postMessage({type:'gdrive_token', token:token, state:state}, 'https://ushigusa1-max.github.io');
+    document.body.innerHTML = '<p style="font-family:sans-serif;text-align:center;margin-top:40px;color:#1a9d8a;font-size:18px">✓ 認証完了！このウィンドウは自動で閉じます。</p>';
+    setTimeout(function(){ window.close(); }, 1500);
+  } else {
+    document.body.innerHTML = '<p style="font-family:sans-serif;text-align:center;margin-top:40px;color:#e05050">認証に失敗しました。ウィンドウを閉じてください。</p>';
+  }
+})();
+</script>
+</body>
+</html>
