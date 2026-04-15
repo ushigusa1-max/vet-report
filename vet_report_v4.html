@@ -1145,9 +1145,11 @@ function initClinicDriveAuth(clinicId){
     var el=document.getElementById('cid_'+clinicId);
     if(el)el.value=clientId;
   }
-  var redirectUri=location.href.split('?')[0].split('#')[0];
   var scope='https://www.googleapis.com/auth/drive.file';
-  var state='gdrive_auth_'+clinicId;
+  /* implicit flow: redirect_uri must match exactly what Google returns token to.
+     We use postMessage approach: open popup, token returned in hash, popup reads it and postMessages back */
+  var redirectUri='https://ushigusa1-max.github.io/vet-report/oauth_callback.html';
+  var state=clinicId;
   var authUrl='https://accounts.google.com/o/oauth2/auth'
     +'?client_id='+encodeURIComponent(clientId)
     +'&redirect_uri='+encodeURIComponent(redirectUri)
@@ -1155,29 +1157,27 @@ function initClinicDriveAuth(clinicId){
     +'&scope='+encodeURIComponent(scope)
     +'&state='+encodeURIComponent(state);
   var w=window.open(authUrl,'gdrive_auth_'+clinicId,'width=520,height=640,left=100,top=50');
-  var timer=setInterval(function(){
-    if(!w||w.closed){clearInterval(timer);return;}
-    try{
-      var hash=w.location.hash;
-      if(hash&&hash.includes('access_token')){
-        var params=new URLSearchParams(hash.substring(1));
-        var token=params.get('access_token');
-        var retState=params.get('state')||'';
-        /* extract clinicId from state */
-        var authClinicId=retState.replace('gdrive_auth_','');
-        if(token&&authClinicId){
-          setClinicDriveToken(authClinicId,token);
-          clearInterval(timer);
-          try{w.close();}catch(e){}
-          renderClinicDriveList();
-          var clinics=sget('clinics')||[];
-          var c=clinics.find(function(x){return x.id===authClinicId;});
-          var cname=c?c.name:'クリニック';
-          showSb('Google Drive連携完了: '+cname,true);
-        }
-      }
-    }catch(e){/* cross-origin before redirect - ignore */}
-  },600);
+  /* Listen for postMessage from callback page */
+  function onMessage(event){
+    if(event.origin!=='https://ushigusa1-max.github.io')return;
+    var d=event.data;
+    if(d&&d.type==='gdrive_token'&&d.token){
+      window.removeEventListener('message',onMessage);
+      var authClinicId=d.state||clinicId;
+      setClinicDriveToken(authClinicId,d.token);
+      try{w.close();}catch(e){}
+      renderClinicDriveList();
+      var clinics=sget('clinics')||[];
+      var c=clinics.find(function(x){return x.id===authClinicId;});
+      var cname=c?c.name:'クリニック';
+      showSb('Google Drive連携完了: '+cname,true);
+    }
+  }
+  window.addEventListener('message',onMessage);
+  /* Fallback: if popup closed without message */
+  var closeCheck=setInterval(function(){
+    if(!w||w.closed){clearInterval(closeCheck);window.removeEventListener('message',onMessage);}
+  },1000);
 }
 
 function saveToGDrive(){
