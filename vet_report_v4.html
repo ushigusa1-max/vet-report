@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>VetAI Report Pro v4</title>
+<title>VetAI Report Pro v4.1</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -211,6 +211,11 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
       <div class="fg"><label>住所</label><input id="c_addr" placeholder="例：宮崎市イオンモール宮崎"></div>
       <div class="fg"><label>電話番号</label><input id="c_tel" placeholder="例：0985-XX-XXXX"></div>
       <div class="fg"><label>Anthropic APIキー（この施設専用）</label><input id="c_key" type="password" placeholder="sk-ant-api03-..." style="font-family:monospace"></div>
+      <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:2px">
+        <div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:8px">&#128190; Google Drive連携（この施設専用）</div>
+        <div class="fg"><label>Google OAuth2 クライアントID</label><input id="c_gclientid" placeholder="XXXXXXXX.apps.googleusercontent.com" style="font-family:monospace;font-size:10px"><div style="font-size:9px;color:var(--text3);margin-top:2px">Google Cloud Consoleで作成。後から設定画面でも変更可能。</div></div>
+        <div class="fg" style="margin-top:8px"><label>デフォルト保存フォルダID（任意）</label><input id="c_folderid" placeholder="Google DriveフォルダURLの末尾ID"><div style="font-size:9px;color:var(--text3);margin-top:2px">担当医フォルダ未設定時のデフォルト保存先</div></div>
+      </div>
     </div>
     <div style="display:flex;gap:8px">
       <button onclick="addClinic()" style="flex:1;padding:11px;background:var(--accent2);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">追加する</button>
@@ -436,17 +441,9 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
       <button class="btn-primary" style="margin-top:12px" onclick="document.getElementById('cmo').classList.add('on')">+ 新しい施設を追加</button>
     </div>
     <div class="card">
-      <div class="ct"><div class="ci gold">&#128190;</div>Google Drive連携</div>
-      <div style="font-size:10px;color:var(--text2);margin-bottom:12px">Google DriveへのPDF自動保存を設定します。獣医師ごとのフォルダへ自動振り分けされます。</div>
-      <div class="setrow">
-        <div><div class="setlbl">Google Drive 連携状態</div><div class="setsub" id="gdriveStatusTxt">未連携</div></div>
-        <button class="btn-sm" onclick="initGDriveAuth()">連携する</button>
-      </div>
-      <div class="setrow">
-        <div><div class="setlbl">デフォルト保存フォルダID</div><div class="setsub">獣医師フォルダが未設定の場合に使用</div></div>
-      </div>
-      <div class="fg" style="margin-top:6px"><input id="defaultFolderInput" placeholder="Google DriveフォルダURL末尾のID" onchange="saveDefaultFolder()" style="font-size:11px;font-family:monospace"></div>
-      <div id="gdriveStatusEl" style="margin-top:8px;font-size:11px;color:var(--text3)"></div>
+      <div class="ct"><div class="ci gold">&#128190;</div>施設別 Google Drive連携</div>
+      <div style="font-size:10px;color:var(--text2);margin-bottom:14px">各施設が<strong style="color:var(--text)">完全に独立したGoogleアカウント・Driveに保存</strong>されます。施設ごとにOAuth認証を行ってください。</div>
+      <div id="clinicDriveList"></div>
     </div>
     <div class="card">
       <div class="ct"><div class="ci">&#128273;</div>APIキー状態</div>
@@ -486,7 +483,7 @@ var vetLevel_sel=0;
 var confirmedLabValues=[]; /* [{item,value,unit,ref,flag}] */
 var confirmedPatient={}; /* overrides from confirm table */
 var prevValues=[]; /* [{item,current,prev}] */
-var gdriveToken=null;
+/* gdriveTokens are stored per-clinic in localStorage as gdrive_token_{clinicId} */
 var currentPrevType='vet'; /* which PDF is in preview */
 var VET_LEVEL_DESC=['','研修医レベル（卒後1〜2年）','一般診療担当（卒後3〜5年）','専門診療担当（卒後6〜10年）','専門医資格相当（卒後11〜15年）','二次診療・大学病院レベル（卒後16年以上）'];
 
@@ -536,11 +533,13 @@ function onClinicChange(){
 function addClinic(){
   var name=document.getElementById('c_name').value.trim();if(!name){alert('施設名を入力してください');return;}
   var zip=document.getElementById('c_zip').value.trim(),addr=document.getElementById('c_addr').value.trim(),tel=document.getElementById('c_tel').value.trim(),key=document.getElementById('c_key').value.trim();
+  var gclientid=document.getElementById('c_gclientid').value.trim();
+  var folderid=document.getElementById('c_folderid').value.trim();
   var clinics=sget('clinics')||[],id='clinic_'+Date.now();
-  clinics.push({id:id,name:name,zip:zip,addr:addr,tel:tel,key:key});sset('clinics',clinics);
+  clinics.push({id:id,name:name,zip:zip,addr:addr,tel:tel,key:key,gclientid:gclientid,folderid:folderid});sset('clinics',clinics);
   if(key)localStorage.setItem('vc_key_'+id,key);
   document.getElementById('cmo').classList.remove('on');
-  ['c_name','c_zip','c_addr','c_tel','c_key'].forEach(function(f){document.getElementById(f).value='';});
+  ['c_name','c_zip','c_addr','c_tel','c_key','c_gclientid','c_folderid'].forEach(function(f){document.getElementById(f).value='';});
   renderClinicSelector();renderClinicList();showSb('施設を追加しました: '+name,true);
 }
 function removeClinic(id){
@@ -680,7 +679,7 @@ function showPage(name){
   document.getElementById('nav_'+name).classList.add('on');
   if(name==='vets')renderVetList();
   if(name==='evidence')renderPdfList();
-  if(name==='settings'){renderClinicList();updateKeyStatus();}
+  if(name==='settings'){renderClinicList();updateKeyStatus();renderClinicDriveList();}
 }
 
 /* ====API CALL==== */
@@ -1017,7 +1016,7 @@ function showPrev(type){
   document.getElementById('ptitle').textContent=title+' — '+pn;
   /* Show Google Drive button if configured */
   var gdbtn=document.getElementById('pgdrive');
-  if(gdriveToken||localStorage.getItem('gdrive_default_folder')){gdbtn.classList.add('on');}else{gdbtn.classList.remove('on');}
+  if(currentClinic&&(getClinicDriveToken(currentClinic.id)||getClinicDefaultFolder(currentClinic.id))){gdbtn.classList.add('on');}else{gdbtn.classList.add('on');} /* always show - auth prompt on click */
   document.getElementById('pmo').classList.add('on');
   document.getElementById('pscroll').scrollTop=0;
 }
@@ -1052,42 +1051,193 @@ function initGDriveAuth(){
   },500);
 }
 
-function saveDefaultFolder(){localStorage.setItem('gdrive_default_folder',document.getElementById('defaultFolderInput').value.trim());}
+/* ====GOOGLE DRIVE: PER-CLINIC INDEPENDENT AUTH==== */
+
+function getClinicDriveToken(clinicId){
+  return localStorage.getItem('gdrive_token_'+clinicId)||null;
+}
+function setClinicDriveToken(clinicId,token){
+  localStorage.setItem('gdrive_token_'+clinicId,token);
+}
+function getClinicClientId(clinicId){
+  var clinics=sget('clinics')||[];
+  var c=clinics.find(function(x){return x.id===clinicId;});
+  return (c&&c.gclientid)||localStorage.getItem('gdrive_clientid_'+clinicId)||'';
+}
+function getClinicDefaultFolder(clinicId){
+  var clinics=sget('clinics')||[];
+  var c=clinics.find(function(x){return x.id===clinicId;});
+  return (c&&c.folderid)||'';
+}
+
+function renderClinicDriveList(){
+  var clinics=sget('clinics')||[];
+  var el=document.getElementById('clinicDriveList');
+  if(!el)return;
+  if(!clinics.length){el.innerHTML='<div style="font-size:11px;color:var(--text3)">施設が登録されていません</div>';return;}
+  el.innerHTML=clinics.map(function(c){
+    var tok=getClinicDriveToken(c.id);
+    var statusHtml=tok
+      ?'<span style="color:var(--accent);font-size:10px;font-weight:700">&#10003; 連携済み</span>'
+      :'<span style="color:var(--warn);font-size:10px">未連携</span>';
+    var cid=getClinicClientId(c.id);
+    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+        '<div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#127973;</div>'+
+        '<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--text)">'+c.name+'</div><div style="font-size:10px;margin-top:2px">'+statusHtml+'</div></div>'+
+        (tok?'<button class="btn-danger" style="padding:4px 10px;font-size:10px" onclick="disconnectClinicDrive(\''+c.id+'\')">解除</button>':'')+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;gap:7px">'+
+        '<div>'+
+          '<div style="font-size:9px;color:var(--text2);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">OAuth2 クライアントID</div>'+
+          '<div style="display:flex;gap:5px">'+
+            '<input id="cid_'+c.id+'" value="'+escHtml(cid)+'" placeholder="XXXXXXXX.apps.googleusercontent.com" style="flex:1;padding:5px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:10px;color:var(--text);background:var(--bg);font-family:monospace">'+
+            '<button class="btn-sm" style="padding:5px 10px;font-size:10px;flex-shrink:0" onclick="saveClinicClientId(\''+c.id+'\')">保存</button>'+
+          '</div>'+
+        '</div>'+
+        '<div>'+
+          '<div style="font-size:9px;color:var(--text2);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">デフォルト保存フォルダID</div>'+
+          '<div style="display:flex;gap:5px">'+
+            '<input id="fid_'+c.id+'" value="'+escHtml(getClinicDefaultFolder(c.id))+'" placeholder="Google DriveフォルダURLの末尾ID" style="flex:1;padding:5px 8px;border:1.5px solid var(--border);border-radius:4px;font-size:10px;color:var(--text);background:var(--bg);font-family:monospace">'+
+            '<button class="btn-sm" style="padding:5px 10px;font-size:10px;flex-shrink:0" onclick="saveClinicFolderId(\''+c.id+'\')">保存</button>'+
+          '</div>'+
+        '</div>'+
+        '<button class="btn-accent" style="width:100%;padding:9px;font-size:11px;margin-top:4px" onclick="initClinicDriveAuth(\''+c.id+'\')">'+
+          (tok?'&#128190; 再認証（アカウント変更）':'&#128190; このクリニックのGoogle Driveに連携する')+
+        '</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function saveClinicClientId(clinicId){
+  var val=document.getElementById('cid_'+clinicId).value.trim();
+  var clinics=sget('clinics')||[];
+  clinics=clinics.map(function(c){if(c.id===clinicId){c.gclientid=val;}return c;});
+  sset('clinics',clinics);
+  showSb('クライアントIDを保存しました。',true);
+}
+
+function saveClinicFolderId(clinicId){
+  var val=document.getElementById('fid_'+clinicId).value.trim();
+  var clinics=sget('clinics')||[];
+  clinics=clinics.map(function(c){if(c.id===clinicId){c.folderid=val;}return c;});
+  sset('clinics',clinics);
+  showSb('フォルダIDを保存しました。',true);
+}
+
+function disconnectClinicDrive(clinicId){
+  if(!confirm('このクリニックのGoogle Drive連携を解除しますか？'))return;
+  localStorage.removeItem('gdrive_token_'+clinicId);
+  renderClinicDriveList();
+}
+
+function initClinicDriveAuth(clinicId){
+  var clientId=getClinicClientId(clinicId);
+  if(!clientId){
+    var inp=prompt('このクリニック専用のGoogle OAuth2クライアントIDを入力してください:\n（Google Cloud Console > 認証情報 > OAuth2クライアントID）');
+    if(!inp||!inp.trim())return;
+    clientId=inp.trim();
+    var clinics=sget('clinics')||[];
+    clinics=clinics.map(function(c){if(c.id===clinicId){c.gclientid=clientId;}return c;});
+    sset('clinics',clinics);
+    /* update input field if visible */
+    var el=document.getElementById('cid_'+clinicId);
+    if(el)el.value=clientId;
+  }
+  var redirectUri=location.href.split('?')[0].split('#')[0];
+  var scope='https://www.googleapis.com/auth/drive.file';
+  var state='gdrive_auth_'+clinicId;
+  var authUrl='https://accounts.google.com/o/oauth2/auth'
+    +'?client_id='+encodeURIComponent(clientId)
+    +'&redirect_uri='+encodeURIComponent(redirectUri)
+    +'&response_type=token'
+    +'&scope='+encodeURIComponent(scope)
+    +'&state='+encodeURIComponent(state);
+  var w=window.open(authUrl,'gdrive_auth_'+clinicId,'width=520,height=640,left=100,top=50');
+  var timer=setInterval(function(){
+    if(!w||w.closed){clearInterval(timer);return;}
+    try{
+      var hash=w.location.hash;
+      if(hash&&hash.includes('access_token')){
+        var params=new URLSearchParams(hash.substring(1));
+        var token=params.get('access_token');
+        var retState=params.get('state')||'';
+        /* extract clinicId from state */
+        var authClinicId=retState.replace('gdrive_auth_','');
+        if(token&&authClinicId){
+          setClinicDriveToken(authClinicId,token);
+          clearInterval(timer);
+          try{w.close();}catch(e){}
+          renderClinicDriveList();
+          var clinics=sget('clinics')||[];
+          var c=clinics.find(function(x){return x.id===authClinicId;});
+          var cname=c?c.name:'クリニック';
+          showSb('Google Drive連携完了: '+cname,true);
+        }
+      }
+    }catch(e){/* cross-origin before redirect - ignore */}
+  },600);
+}
 
 function saveToGDrive(){
+  if(!currentClinic){showSb('施設を選択してください。',false);return;}
+  var clinicId=currentClinic.id;
+  var token=getClinicDriveToken(clinicId);
+
   /* Find vet folder */
   var vn=gv('vetName');
   var vets=getVetRoster();
   var vet=vets.find(function(v){return v.name===vn;});
-  var folderId=(vet&&vet.folderId)?vet.folderId:(localStorage.getItem('gdrive_default_folder')||'');
-  if(!folderId){alert('Google DriveフォルダIDが設定されていません。\n「施設設定 > Google Drive連携」または「獣医師名簿」でフォルダIDを設定してください。');return;}
-  /* Get HTML content and convert to blob */
+  var folderId=(vet&&vet.folderId)?vet.folderId:getClinicDefaultFolder(clinicId);
+
   var pn=gv('petName')||'患者';
   var ed=gv('examDate')||new Date().toISOString().split('T')[0];
   var vname=gv('vetName')||'担当医';
   var typeLabel=currentPrevType==='vet'?'獣医師用':'オーナー向け';
   var filename=ed+'_'+pn+'_'+typeLabel+'_'+vname+'.html';
   var htmlContent=document.getElementById('pbody').innerHTML;
-  var fullHtml='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>'+filename+'</title><style>body{font-family:sans-serif;margin:0}table{border-collapse:collapse}th,td{padding:4px 8px;border:1px solid #ccc}</style></head><body>'+htmlContent+'</body></html>';
+  var fullHtml='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>'+filename+'</title><style>body{font-family:sans-serif;margin:0;padding:8mm}table{border-collapse:collapse;width:100%}th,td{padding:4px 8px;border:1px solid #ccc}</style></head><body>'+htmlContent+'</body></html>';
   var blob=new Blob([fullHtml],{type:'text/html'});
-  if(!gdriveToken){
-    /* Try without auth - just download */
-    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
-    showSb('Google Drive未連携のためローカル保存しました。',true);return;
+
+  if(!token){
+    /* No token - offer to authenticate first */
+    if(confirm('「'+currentClinic.name+'」のGoogle Driveに連携されていません。\n今すぐ認証しますか？\n\n（「キャンセル」でローカルに保存します）')){
+      initClinicDriveAuth(clinicId);
+    }else{
+      var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+      showSb('ローカルに保存しました: '+filename,true);
+    }
+    return;
   }
-  /* Upload to Drive */
-  var meta={name:filename,parents:[folderId]};
+
+  var meta=folderId?{name:filename,parents:[folderId]}:{name:filename};
   var form=new FormData();
   form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
   form.append('file',blob);
-  document.getElementById('pgdrive').textContent='保存中...';
+  var btn=document.getElementById('pgdrive');
+  btn.textContent='保存中...';
   fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
-    method:'POST',headers:{'Authorization':'Bearer '+gdriveToken},body:form
+    method:'POST',headers:{'Authorization':'Bearer '+token},body:form
   }).then(function(r){return r.json();}).then(function(d){
-    if(d.id){document.getElementById('pgdrive').textContent='Drive保存完了!';showSb('Google Driveへ保存しました: '+filename,true);}
-    else{document.getElementById('pgdrive').textContent='保存失敗';showSb('Drive保存失敗: '+(d.error&&d.error.message||'不明'),false);}
-    setTimeout(function(){document.getElementById('pgdrive').textContent='&#128190; Google Drive保存';},3000);
-  }).catch(function(e){document.getElementById('pgdrive').textContent='保存失敗';showSb('Drive保存エラー: '+e.message,false);});
+    if(d.id){
+      btn.textContent='&#128190; 保存完了';
+      var loc=folderId?'指定フォルダ':'マイドライブ直下';
+      showSb('Google Drive('+currentClinic.name+' / '+loc+')へ保存: '+filename,true);
+    }else if(d.error&&d.error.code===401){
+      /* Token expired */
+      localStorage.removeItem('gdrive_token_'+clinicId);
+      btn.textContent='&#128190; Drive保存';
+      showSb('認証の有効期限が切れました。施設設定から再認証してください。',false);
+    }else{
+      btn.textContent='&#128190; Drive保存';
+      showSb('Drive保存失敗: '+(d.error&&d.error.message||'不明'),false);
+    }
+    setTimeout(function(){btn.textContent='&#128190; Google Drive保存';},4000);
+  }).catch(function(e){
+    btn.textContent='&#128190; Drive保存';
+    showSb('Drive保存エラー: '+e.message,false);
+  });
 }
 </script>
 </body>
