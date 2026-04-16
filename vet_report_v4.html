@@ -275,9 +275,12 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
       <div class="ct"><div class="ci">&#128444;&#65039;</div>検査ファイルのアップロード <div class="badge" id="fileBadge">0件</div></div>
       <p style="font-size:10px;color:var(--text2);margin-bottom:10px">画像（JPEG/PNG/HEIC）およびPDF（検査票・カルテ）に対応。複数ファイル可。</p>
       <div class="uparea">
-        <input type="file" id="fi" accept="image/*,application/pdf,.pdf" multiple onchange="onFileChange(this)">
+        <input type="file" id="fi" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.heic,.heif" multiple onchange="onFileChange(this)">
         <div class="upico">&#128247;</div>
-        <div class="uptxt">タップして検査画像またはPDFを選択<br><span style="font-size:10px;color:var(--text3)">画像・PDF複数対応</span></div>
+        <div class="uptxt">タップしてファイルを選択<br>
+          <span style="font-size:11px;color:var(--accent);font-weight:600">&#128248; カメラ撮影　｜　&#128444; アルバムから　｜　&#128196; PDF</span><br>
+          <span style="font-size:10px;color:var(--text3)">JPEG / PNG / HEIC / PDF　複数ファイル対応</span>
+        </div>
       </div>
       <div class="pvw" id="pvw"></div>
       <div id="pdfFileList" style="margin-top:8px"></div>
