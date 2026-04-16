@@ -341,15 +341,11 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
         <div style="background:rgba(34,200,176,.15);border:1px solid var(--accent);color:var(--accent);padding:4px 12px;border-radius:20px;font-size:10px;font-weight:700">AI解析済み</div>
       </div>
 
-      <!-- Cost Selector -->
+      <!-- Exam Recommendation (vet-facing, read-only) -->
       <div class="card" id="costCard" style="display:none">
-        <div class="ct"><div class="ci">&#128180;</div>推奨検査・費用選択 <div class="badge">クリックで選択</div></div>
-        <div style="font-size:10px;color:var(--text2);margin-bottom:8px">オーナーに説明する検査を選択。選択内容がオーナー向け資料と費用表に反映されます。</div>
-        <div class="costgrid" id="costgrid"></div>
-        <div style="margin-top:10px;display:flex;gap:8px">
-          <button class="btn-sm" onclick="selectAllCosts(true)">全て選択</button>
-          <button class="btn-sm" onclick="selectAllCosts(false)">全て解除</button>
-        </div>
+        <div class="ct"><div class="ci">&#128300;</div>推奨追加検査リスト <div class="badge">獣医師判断用</div></div>
+        <div style="font-size:10px;color:var(--text2);margin-bottom:10px">AIが提案する追加検査です。獣医師の判断でオーナーへの説明に活用してください。費用目安はPDFレポートに自動で掲載されます。</div>
+        <div id="costgrid"></div>
       </div>
 
       <div class="card">
@@ -913,11 +909,14 @@ function renderCostGrid(costs){
   card.style.display='block';
   grid.innerHTML=costs.map(function(c,i){
     var urgClass=c.urgency==='高'?'urg-h':c.urgency==='中'?'urg-m':'urg-l';
-    return '<div class="costitem sel" id="cost_'+i+'" onclick="toggleCost('+i+')">'+
-      '<div class="cname">'+c.name+'</div>'+
-      '<div class="cwhy">'+c.why+'<br><span style="font-size:9px">'+c.what+'</span></div>'+
-      '<div class="cprice">'+c.price_low.toLocaleString()+'〜'+c.price_high.toLocaleString()+'円</div>'+
-      '<span class="curgency '+urgClass+'">緊急度:'+c.urgency+'</span>'+
+    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">'+
+      '<div style="flex-shrink:0;width:22px;height:22px;background:var(--accent2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;margin-top:1px">'+(i+1)+'</div>'+
+      '<div style="flex:1">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px">'+c.name+'<span class="curgency '+urgClass+'" style="margin-left:8px">緊急度：'+c.urgency+'</span></div>'+
+        '<div style="font-size:10px;color:var(--text2);margin-bottom:3px">'+c.why+'</div>'+
+        '<div style="font-size:10px;color:var(--text3)">この検査でわかること：'+c.what+'</div>'+
+        '<div style="font-size:12px;font-weight:700;color:var(--gold);margin-top:4px">費用目安：'+c.price_low.toLocaleString()+'〜'+c.price_high.toLocaleString()+'円</div>'+
+      '</div>'+
     '</div>';
   }).join('');
 }
@@ -943,9 +942,9 @@ function md2html(text,ac,hc){
     else if(/^#{1,3}\s/.test(s)){out+='<div style="background:#e8f0f8;border-left:3px solid '+ac+';padding:2mm 3mm;margin:3mm 0 2mm;font-size:9pt;font-weight:bold">'+clean(s)+'</div>';}
     else if(s===''||s==='---'){out+='<div style="height:2mm"></div>';}
     else if(/^Q\d*[：:]/.test(s)){out+='<div style="font-weight:bold;color:'+hc+';margin-top:3mm;font-size:8.5pt">'+clean(s)+'</div>';}
-    else if(/^A\d*[：:]/.test(s)){out+='<div style="padding-left:4mm;font-size:8.5pt;color:#2d5a3d">'+clean(s)+'</div>';}
-    else if(/^[・①②③④⑤⑥⑦⑧⑨]/.test(s)||/^\d+[.、]/.test(s)){out+='<div style="padding-left:4mm;font-size:8.5pt">'+clean(s)+'</div>';}
-    else{out+='<div style="font-size:8.5pt;margin:1mm 0">'+clean(s)+'</div>';}
+    else if(/^A\d*[：:]/.test(s)){out+='<div style="padding-left:4mm;font-size:8.5pt;color:#1a4a2e">'+clean(s)+'</div>';}
+    else if(/^[・①②③④⑤⑥⑦⑧⑨]/.test(s)||/^\d+[.、]/.test(s)){out+='<div style="padding-left:4mm;font-size:8.5pt;color:#1a1a2e">'+clean(s)+'</div>';}
+    else{out+='<div style="font-size:8.5pt;margin:1mm 0;color:#1a1a2e">'+clean(s)+'</div>';}
   });
   if(inT)flush();return out;
 }
@@ -973,46 +972,82 @@ function showPrev(type){
       confirmedLabValues.map(function(v){
         var flagColor=v.flag==='H'||v.flag==='異常'||v.flag==='L'?'#cc0000':'#006600';
         var prev=prevMap[v.item]||'';
-        return '<tr><td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4">'+v.item+'</td>'+
-          '<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:right;font-weight:bold">'+v.valueUnit+'</td>'+
-          (prevValues.length?'<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:right;color:#666">'+prev+'</td>':'')+
-          '<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:center;color:#555">'+v.ref+'</td>'+
+        return '<tr><td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;color:#1a1a2e">'+v.item+'</td>'+
+          '<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:right;font-weight:bold;color:#1a1a2e">'+v.valueUnit+'</td>'+
+          (prevValues.length?'<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:right;color:#444">'+prev+'</td>':'')+
+          '<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:center;color:#333">'+v.ref+'</td>'+
           '<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:center;color:'+flagColor+';font-weight:bold">'+v.flag+'</td></tr>';
       }).join('')+'</table>';
   }
-  /* Cost table */
-  var costSection='';
-  if(!isVet&&selectedCosts.length){
-    var cjm=ad.vet.match(/<COST_JSON>([\s\S]*?)<\/COST_JSON>/);
-    if(cjm){try{
-      var allCosts=JSON.parse(cjm[1].trim());
-      var selList=selectedCosts.map(function(i){return allCosts[i];}).filter(Boolean);
-      if(selList.length){
-        costSection='<div style="background:'+ac+';color:white;padding:2.5mm 4mm;margin:4mm 0 3mm;font-size:10pt;font-weight:bold;border-radius:2mm">【推奨する検査と費用のご案内】</div>'+
-          '<table style="width:100%;border-collapse:collapse;margin:2mm 0;font-size:8.5pt">'+
-          '<tr><th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:left">検査名</th><th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:left">目的・わかること</th><th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:right">費用目安</th><th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:center">緊急度</th></tr>'+
-          selList.map(function(c){var urgBg=c.urgency==='高'?'#ffeeee':c.urgency==='中'?'#fff3e0':'#e8f5e9';return '<tr><td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;font-weight:bold">'+c.name+'</td><td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4">'+c.why+'<br><span style="font-size:7.5pt;color:#555">'+c.what+'</span></td><td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:right">'+c.price_low.toLocaleString()+'〜'+c.price_high.toLocaleString()+'円</td><td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:center;background:'+urgBg+'">'+c.urgency+'</td></tr>';}).join('')+
-        '</table>';
+  /* Cost/exam section — shown in BOTH vet and owner PDFs, built from COST_JSON */
+  var examSection='';
+  var cjm=ad.vet.match(/<COST_JSON>([\s\S]*?)<\/COST_JSON>/);
+  if(cjm){try{
+    var allCosts=JSON.parse(cjm[1].trim());
+    if(allCosts&&allCosts.length){
+      if(isVet){
+        /* Vet PDF: clinical exam recommendation table */
+        examSection='<div style="background:'+ac+';color:white;padding:2.5mm 4mm;margin:4mm 0 2mm;font-size:9pt;font-weight:bold;border-radius:2mm">【推奨する追加検査】獣医師判断用</div>'+
+          '<table style="width:100%;border-collapse:collapse;margin:2mm 0;font-size:8pt">'+
+          '<tr><th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:left">検査名</th>'+
+          '<th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:left">推奨理由・臨床的意義</th>'+
+          '<th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:right">費用目安</th>'+
+          '<th style="background:'+hc+';color:white;padding:2mm 2.5mm;text-align:center">緊急度</th></tr>'+
+          allCosts.map(function(c){
+            var urgBg=c.urgency==='高'?'#fff0f0':c.urgency==='中'?'#fffbf0':'#f0fff8';
+            var urgTxt=c.urgency==='高'?'#cc0000':c.urgency==='中'?'#996600':'#006600';
+            return '<tr style="color:#1a1a2e">'+
+              '<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;font-weight:bold;color:#1a1a2e">'+c.name+'</td>'+
+              '<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;color:#2a2a3e">'+c.why+'<br><span style="font-size:7pt;color:#444">'+c.what+'</span></td>'+
+              '<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:right;color:#1a1a2e">'+c.price_low.toLocaleString()+'〜'+c.price_high.toLocaleString()+'円</td>'+
+              '<td style="padding:2mm 2.5mm;border-bottom:0.5px solid #d0d8e4;text-align:center;background:'+urgBg+';color:'+urgTxt+';font-weight:bold">'+c.urgency+'</td></tr>';
+          }).join('')+'</table>';
+      } else {
+        /* Owner PDF: plain-language exam explanation to help owner understand and choose */
+        examSection='<div style="background:'+ac+';color:white;padding:2.5mm 4mm;margin:4mm 0 2mm;font-size:9pt;font-weight:bold;border-radius:2mm">【次のステップ：検査のご案内】</div>'+
+          '<div style="font-size:8pt;color:#333;margin-bottom:3mm;padding:0 1mm">担当獣医師が以下の検査をご提案しています。それぞれ何のための検査か、費用の目安とあわせてご確認ください。</div>'+
+          allCosts.map(function(c,i){
+            var urgBg=c.urgency==='高'?'#fff0f0':c.urgency==='中'?'#fffbf0':'#f0fff8';
+            var urgTxt=c.urgency==='高'?'#cc0000':c.urgency==='中'?'#996600':'#006600';
+            var urgLabel=c.urgency==='高'?'早急に受けることをお勧めします':c.urgency==='中'?'なるべく早めにご検討ください':'時間のあるときにご検討ください';
+            return '<div style="margin-bottom:3mm;padding:2.5mm 3mm;border:1px solid #d0d8e4;border-radius:2mm;border-left:3px solid '+ac+'">'+
+              '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1mm">'+
+                '<span style="font-weight:bold;font-size:9pt;color:#1a1a2e">'+String(i+1)+'. '+c.name+'</span>'+
+                '<span style="font-size:7.5pt;background:'+urgBg+';color:'+urgTxt+';padding:1px 6px;border-radius:10px;font-weight:bold">'+urgLabel+'</span>'+
+              '</div>'+
+              '<div style="font-size:8pt;color:#2a2a3e;margin-bottom:1mm">目的：'+c.why+'</div>'+
+              '<div style="font-size:8pt;color:#333;margin-bottom:1mm">この検査でわかること：'+c.what+'</div>'+
+              '<div style="font-size:8.5pt;font-weight:bold;color:'+hc+'">費用目安：'+c.price_low.toLocaleString()+'円〜'+c.price_high.toLocaleString()+'円</div>'+
+            '</div>';
+          }).join('');
       }
-    }catch(e){}}
-  }
+    }
+  }catch(e){}}
+
   document.getElementById('pbody').innerHTML=
+    /* Header band */
     '<div style="background:'+hc+';color:white;padding:10mm 14mm 8mm;position:relative">'+conf+
     '<div style="font-size:8pt;color:#c8a96e;margin-bottom:2mm">'+currentClinic.name+'</div>'+
-    '<div style="font-size:16pt;font-weight:bold;margin-bottom:2mm">'+title+'</div>'+
-    '<div style="font-size:7pt;color:#aaa">生成日時:'+now+'</div></div>'+
-    '<div style="margin:5mm 14mm;padding:4mm;background:#f4f7fb;border:1px solid #c0cfe0;border-radius:3mm">'+
-    '<div style="font-size:7pt;font-weight:bold;color:'+hc+';margin-bottom:2mm">患者情報</div>'+
-    '<div style="font-size:8.5pt;margin:1mm 0">患者名:<strong>'+pn+'</strong>  動物種:'+sp+'('+br+')  年齢:'+ag+'  性別:'+gn+'  体重:'+wt+'kg</div>'+
-    '<div style="font-size:8.5pt;margin:1mm 0">オーナー:'+ow+'  検査日:'+ed+'  担当:'+vn+'</div></div>'+
-    (ch?'<div style="margin:0 14mm 3mm;padding:2mm 3mm 2mm 7mm;border-left:3px solid '+ac+';background:#f8fbf9;font-size:8.5pt"><strong>主訴:</strong>'+ch+'</div>':'')+
+    '<div style="font-size:16pt;font-weight:bold;margin-bottom:2mm;color:white">'+title+'</div>'+
+    '<div style="font-size:7pt;color:#ccc">生成日時:'+now+'</div></div>'+
+    /* Patient info box — explicit dark text */
+    '<div style="margin:5mm 14mm;padding:4mm;background:#eef2f8;border:1px solid #c0cfe0;border-radius:3mm">'+
+    '<div style="font-size:7pt;font-weight:bold;color:'+hc+';margin-bottom:2mm;text-transform:uppercase;letter-spacing:.05em">患者情報</div>'+
+    '<div style="font-size:8.5pt;margin:1mm 0;color:#1a1a2e">患者名：<strong>'+pn+'</strong>　動物種：'+sp+'（'+br+'）　年齢：'+ag+'　性別：'+gn+'　体重：'+wt+'kg</div>'+
+    '<div style="font-size:8.5pt;margin:1mm 0;color:#1a1a2e">オーナー：'+ow+'　　検査日：'+ed+'　　担当：'+vn+'</div></div>'+
+    /* Chief complaint */
+    (ch?'<div style="margin:0 14mm 3mm;padding:2mm 3mm 2mm 7mm;border-left:3px solid '+ac+';background:#f5fff8;font-size:8.5pt;color:#1a1a2e"><strong>主訴：</strong>'+ch+'</div>':'')+
+    /* Lab values table */
     (labTable?'<div style="padding:0 14mm 4mm">'+labTable+'</div>':'')+
-    '<div style="padding:2mm 14mm 8mm">'+md2html(content,ac,hc)+'</div>'+
-    (costSection?'<div style="padding:0 14mm 8mm">'+costSection+'</div>':'')+
-    '<div style="border-top:1px solid #e0ddd8;padding:2.5mm 14mm;display:flex;justify-content:space-between;font-size:7pt;color:#888">'+
-    '<span>'+currentClinic.name+'  〒'+currentClinic.zip+' '+currentClinic.addr+'  TEL:'+currentClinic.tel+'</span>'+
+    /* Exam recommendation section */
+    (examSection?'<div style="padding:0 14mm 4mm">'+examSection+'</div>':'')+
+    /* Main AI content */
+    '<div style="padding:2mm 14mm 8mm;color:#1a1a2e">'+md2html(content,ac,hc)+'</div>'+
+    /* Footer */
+    '<div style="border-top:1px solid #e0ddd8;padding:2.5mm 14mm;display:flex;justify-content:space-between;font-size:7pt;color:#555">'+
+    '<span>'+currentClinic.name+'　〒'+currentClinic.zip+' '+currentClinic.addr+'　TEL:'+currentClinic.tel+'</span>'+
     (isVet?'<span style="color:#cc3333;font-weight:bold">【社内限・部外秘】</span>':'<span></span>')+
-    '<span>'+pn+'  '+ed+'</span></div>';
+    '<span>'+pn+'　'+ed+'</span></div>';
   document.getElementById('ptitle').textContent=title+' — '+pn;
   /* Show Google Drive button if configured */
   var gdbtn=document.getElementById('pgdrive');
