@@ -1102,7 +1102,7 @@ function getClinicClientId(clinicId){
 function getClinicDefaultFolder(clinicId){
   var clinics=sget('clinics')||[];
   var c=clinics.find(function(x){return x.id===clinicId;});
-  return (c&&c.folderid)||'';
+  return (c&&(c.folderid||c.folderId))||'';
 }
 
 function renderClinicDriveList(){
@@ -1220,11 +1220,21 @@ function saveToGDrive(){
   var clinicId=currentClinic.id;
   var token=getClinicDriveToken(clinicId);
 
-  /* Find vet folder */
+  /* Find folder ID: 1. vet-specific folder, 2. clinic default folder, 3. localStorage fallback */
   var vn=gv('vetName');
   var vets=getVetRoster();
   var vet=vets.find(function(v){return v.name===vn;});
-  var folderId=(vet&&vet.folderId)?vet.folderId:getClinicDefaultFolder(clinicId);
+  var folderId='';
+  if(vet&&vet.folderId) folderId=vet.folderId;
+  if(!folderId) folderId=getClinicDefaultFolder(clinicId);
+  /* Also re-read from clinics data directly (in case currentClinic is stale) */
+  if(!folderId){
+    var freshClinics=sget('clinics')||[];
+    var freshClinic=freshClinics.find(function(c){return c.id===clinicId;});
+    if(freshClinic&&freshClinic.folderid) folderId=freshClinic.folderid;
+  }
+  /* Last fallback: global default */
+  if(!folderId) folderId=localStorage.getItem('gdrive_default_folder')||'';
 
   var pn=gv('petName')||'患者';
   var ed=gv('examDate')||new Date().toISOString().split('T')[0];
