@@ -1067,7 +1067,7 @@ function initGDriveAuth(){
     CLIENT_ID=cid;
   }else{CLIENT_ID=saved;}
   var redirect=location.href.split('?')[0];
-  var scope='https://www.googleapis.com/auth/drive.file';
+  var scope='https://www.googleapis.com/auth/drive';
   var authUrl='https://accounts.google.com/o/oauth2/auth?client_id='+encodeURIComponent(CLIENT_ID)+'&redirect_uri='+encodeURIComponent(redirect)+'&response_type=token&scope='+encodeURIComponent(scope);
   var w=window.open(authUrl,'gdrive_auth','width=500,height=600');
   var timer=setInterval(function(){
@@ -1180,7 +1180,7 @@ function initClinicDriveAuth(clinicId){
     var el=document.getElementById('cid_'+clinicId);
     if(el)el.value=clientId;
   }
-  var scope='https://www.googleapis.com/auth/drive.file';
+  var scope='https://www.googleapis.com/auth/drive';
   /* implicit flow: redirect_uri must match exactly what Google returns token to.
      We use postMessage approach: open popup, token returned in hash, popup reads it and postMessages back */
   var redirectUri='https://ushigusa1-max.github.io/vet-report/oauth_callback.html';
@@ -1266,21 +1266,21 @@ function saveToGDrive(){
     method:'POST',headers:{'Authorization':'Bearer '+token},body:form
   }).then(function(r){return r.json();}).then(function(d){
     if(d.id){
-      btn.textContent='&#128190; 保存完了';
+      btn.innerHTML='&#128190; 保存完了';
       var loc=folderId?'指定フォルダ':'マイドライブ直下';
       showSb('Google Drive('+currentClinic.name+' / '+loc+')へ保存: '+filename,true);
     }else if(d.error&&d.error.code===401){
       /* Token expired */
       localStorage.removeItem('gdrive_token_'+clinicId);
-      btn.textContent='&#128190; Drive保存';
+      btn.innerHTML='&#128190; Drive保存';
       showSb('認証の有効期限が切れました。施設設定から再認証してください。',false);
     }else{
-      btn.textContent='&#128190; Drive保存';
+      btn.innerHTML='&#128190; Drive保存';
       showSb('Drive保存失敗: '+(d.error&&d.error.message||'不明'),false);
     }
-    setTimeout(function(){btn.textContent='&#128190; Google Drive保存';},4000);
+    setTimeout(function(){btn.innerHTML='&#128190; Google Drive保存';},4000);
   }).catch(function(e){
-    btn.textContent='&#128190; Drive保存';
+    btn.innerHTML='&#128190; Drive保存';
     showSb('Drive保存エラー: '+e.message,false);
   });
 }
