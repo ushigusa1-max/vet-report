@@ -1038,8 +1038,8 @@ function showPrev(type){
     '<div style="font-size:7pt;font-weight:bold;color:'+hc+';margin-bottom:2mm;text-transform:uppercase;letter-spacing:.05em">患者情報</div>'+
     '<div style="font-size:8.5pt;margin:1mm 0;color:#1a1a2e">患者名：<strong>'+pn+'</strong>　動物種：'+sp+'（'+br+'）　年齢：'+ag+'　性別：'+gn+'　体重：'+wt+'kg</div>'+
     '<div style="font-size:8.5pt;margin:1mm 0;color:#1a1a2e">オーナー：'+ow+'　　検査日：'+ed+'　　担当：'+vn+'</div></div>'+
-    /* Chief complaint */
-    (ch?'<div style="margin:0 14mm 3mm;padding:2mm 3mm 2mm 7mm;border-left:3px solid '+ac+';background:#f5fff8;font-size:8.5pt;color:#1a1a2e"><strong>主訴：</strong>'+ch+'</div>':'')+
+    /* Chief complaint — 獣医師用のみ表示、オーナー向けは非表示 */
+    (isVet&&ch?'<div style="margin:0 14mm 3mm;padding:2mm 3mm 2mm 7mm;border-left:3px solid '+ac+';background:#f5fff8;font-size:8.5pt;color:#1a1a2e"><strong>主訴：</strong>'+ch+'</div>':'')+
     /* Lab values table */
     (labTable?'<div style="padding:0 14mm 4mm">'+labTable+'</div>':'')+
     /* Exam recommendation section */
