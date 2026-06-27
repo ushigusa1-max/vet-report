@@ -289,7 +289,7 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
 
     <!-- OCR Confirm Panel (NEW: step 6) -->
     <div class="confirm-section" id="confirmSection">
-      <div class="confirm-banner">&#9888;&#65039; OCR読み取り結果を確認・修正してから解析を実行してください</div>
+      <div class="confirm-banner" id="confirmBanner">&#9888;&#65039; OCR読み取り結果を確認・修正してから解析を実行してください</div>
       <!-- Patient confirm -->
       <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px">&#128203; 患者・来院情報の確認</div>
       <table class="confirm-table" id="confirmPatientTable">
@@ -455,7 +455,7 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
       <div class="ct"><div class="ci">&#9432;</div>アプリ情報</div>
       <div style="font-size:11px;color:var(--text2);line-height:1.9">
         <div>VetAI Report Pro v4.0</div>
-        <div>対応モデル: claude-sonnet-4-20250514</div>
+        <div>対応モデル: claude-sonnet-4-6</div>
         <div>スマートフォン対応（Android / iOS）</div>
         <div style="margin-top:6px;color:var(--text3)">Powered by Anthropic Claude API</div>
       </div>
@@ -689,7 +689,7 @@ function callAPI(messages,maxTokens,cb){
   fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens||4000,messages:messages}),
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:maxTokens||4000,messages:messages}),
     signal:ctrl.signal
   }).then(function(r){clearTimeout(tid);return r.json();}).then(function(d){
     if(d.error){var msg=d.error.message;if(d.error.type==='authentication_error'){msg='APIキーが無効です。';document.getElementById('kmo').classList.add('on');}cb(null,msg);}
@@ -747,18 +747,29 @@ function startOCRAndConfirm(){
     callAPI([{role:'user',content:blocks.concat([{type:'text',text:ocrPrompt}])}],2000,function(txt,err){
       document.getElementById('ld').classList.remove('on');btn.disabled=false;
       var patient={},labs=[];
-      if(!err&&txt){
+      var ocrFailed=false;
+      if(err){
+        ocrFailed=true;
+        showSb('OCR読み取りに失敗しました：'+err+'　手動で入力してから解析を進めてください。',false);
+      }else if(txt){
         try{
           var m=txt.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
           if(m){var d=JSON.parse(m[0]);patient=d.patient||{};labs=d.labValues||[];}
-        }catch(e){}
+          else{ocrFailed=true;showSb('OCRの応答を解析できませんでした。手動で入力してから解析を進めてください。',false);}
+        }catch(e){
+          ocrFailed=true;
+          showSb('OCR結果の解析でエラーが発生しました：'+e.message+'　手動で入力してください。',false);
+        }
+      }else{
+        ocrFailed=true;
+        showSb('OCRから応答がありませんでした。手動で入力してから解析を進めてください。',false);
       }
-      buildConfirmUI(patient,labs);
+      buildConfirmUI(patient,labs,ocrFailed);
     });
   });
 }
 
-function buildConfirmUI(patient,labs){
+function buildConfirmUI(patient,labs,ocrFailed){
   /* Apply patient info to form */
   var map={petName:'患者名',breed:'品種',age:'年齢',weight:'体重',ownerName:'オーナー',vetName:'担当医',chief:'主訴',history:'既往歴'};
   Object.keys(map).forEach(function(f){var el=document.getElementById(f);if(el&&patient[f]&&patient[f].trim())el.value=patient[f];});
@@ -789,6 +800,16 @@ function buildConfirmUI(patient,labs){
   document.getElementById('prevValueRows').innerHTML='';
 
   /* Show confirm panel, hide analyze button */
+  var banner=document.getElementById('confirmBanner');
+  if(ocrFailed){
+    banner.innerHTML='&#10060; OCR自動読み取りに失敗しました。お手数ですが全項目を手動で入力してください。';
+    banner.style.background='linear-gradient(135deg,#cc3333,#e05050)';
+    banner.style.color='#ffffff';
+  }else{
+    banner.innerHTML='&#9888;&#65039; OCR読み取り結果を確認・修正してから解析を実行してください';
+    banner.style.background='linear-gradient(135deg,var(--gold2),var(--gold))';
+    banner.style.color='#0a1628';
+  }
   document.getElementById('confirmSection').classList.add('on');
   document.getElementById('abt').style.display='none';
   document.getElementById('confirmSection').scrollIntoView({behavior:'smooth'});
