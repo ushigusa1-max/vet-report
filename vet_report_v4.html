@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>VetAI Report Pro v4.1</title>
+<title>VetAI Report Pro v5.0 (KB連携)</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -313,10 +313,20 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
       </div>
     </div>
 
-    <!-- Evidence (compact) -->
+    <!-- Knowledge DB status -->
+    <div class="card" style="background:linear-gradient(135deg,#f0faf8,#e8f8f5);border-left:4px solid var(--accent)">
+      <div class="ct"><div class="ci">&#128214;</div>院内ナレッジDB自動参照 <div class="badge" id="kbBadge">RAG</div></div>
+      <div id="kbStatus" style="font-size:11px;color:var(--accent2);font-weight:600;margin-bottom:6px">読込中...</div>
+      <div style="font-size:10px;color:var(--text2);line-height:1.6">
+        患者情報・主訴・検査値から関連する<strong>書籍章・薬剤DB</strong>を自動検索し、その情報のみからAIが回答します。<br>
+        <span style="color:var(--gold2);font-weight:600">※ ナレッジDBに載っていない話題は「該当なし」と回答します。</span>
+      </div>
+    </div>
+
+    <!-- Evidence (compact, supplementary) -->
     <div class="card">
-      <div class="ct"><div class="ci gold">&#128218;</div>エビデンスソース <div class="badge" id="evBadge">0件</div></div>
-      <div style="font-size:10px;color:var(--text2);margin-bottom:8px">追加された論文・成書がAI解析の参考文献として使用されます</div>
+      <div class="ct"><div class="ci gold">&#128218;</div>追加エビデンスPDF <div class="badge" id="evBadge">0件</div></div>
+      <div style="font-size:10px;color:var(--text2);margin-bottom:8px">ナレッジDB外の論文・成書を追加参照する場合のみ使用（任意）</div>
       <div class="pdflist" id="pdfTagList"></div>
       <button class="btn-sm" style="margin-top:8px" onclick="showPage('evidence')">&#128196; エビデンスを管理</button>
     </div>
@@ -454,7 +464,7 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
     <div class="card">
       <div class="ct"><div class="ci">&#9432;</div>アプリ情報</div>
       <div style="font-size:11px;color:var(--text2);line-height:1.9">
-        <div>VetAI Report Pro v4.0</div>
+        <div>VetAI Report Pro v5.0 (院内ナレッジDB連携)</div>
         <div>対応モデル: claude-sonnet-4-6</div>
         <div>スマートフォン対応（Android / iOS）</div>
         <div style="margin-top:6px;color:var(--text3)">Powered by Anthropic Claude API</div>
@@ -500,6 +510,120 @@ function loadAll(){
   if(gfolder)document.getElementById('defaultFolderInput').value=gfolder;
   var clinics=sget('clinics')||[];
   if(clinics.length){document.getElementById('clinicSel').value=clinics[0].id;onClinicChange();}
+  loadKnowledgeBase();
+}
+
+/* ====KNOWLEDGE BASE==== */
+var KB={index:null,drug:null,loaded:false,loading:false,error:null};
+function loadKnowledgeBase(){
+  if(KB.loaded||KB.loading)return;
+  KB.loading=true;
+  updateKBStatus('読込中...');
+  Promise.all([
+    fetch('./knowledge/kb_index.json',{cache:'default'}).then(function(r){if(!r.ok)throw new Error('index HTTP '+r.status);return r.json();}),
+    fetch('./knowledge/kb_drug.json',{cache:'default'}).then(function(r){if(!r.ok)throw new Error('drug HTTP '+r.status);return r.json();})
+  ]).then(function(vals){
+    KB.index=vals[0];KB.drug=vals[1];KB.loaded=true;KB.loading=false;
+    updateKBStatus('ナレッジDB: '+KB.index.r.length+'章 / '+KB.drug.length+'薬剤 読込済');
+  }).catch(function(e){
+    KB.loading=false;KB.error=e.message;
+    updateKBStatus('ナレッジDB読込失敗: '+e.message);
+    console.error('KB load failed:',e);
+  });
+}
+function updateKBStatus(txt){
+  var el=document.getElementById('kbStatus');
+  if(el)el.textContent=txt;
+}
+/* 症例情報→関連章＋薬剤を抽出 */
+function searchKnowledge(query,topN){
+  if(!KB.loaded)return {sections:[],drugs:[]};
+  topN=topN||15;
+  var q=String(query||'');
+  /* トークン化：日本語も英数字も分割 */
+  var raw=q.replace(/[（）\(\)「」【】\[\]、。,\.\/\-：:；;]/g,' ').split(/\s+/).filter(function(t){return t.length>=2;});
+  /* 重複除去 */
+  var seen={};var terms=[];
+  raw.forEach(function(t){var l=t.toLowerCase();if(!seen[l]){seen[l]=1;terms.push(l);}});
+  /* 章スコアリング */
+  var sectionScores=[];
+  var rlen=KB.index.r.length;
+  for(var idx=0;idx<rlen;idx++){
+    var rec=KB.index.r[idx];
+    var kws=rec[5];var head=String(rec[4]||'').toLowerCase();
+    var score=0;var matched=[];
+    for(var i=0;i<terms.length;i++){
+      var t=terms[i];
+      for(var j=0;j<kws.length;j++){
+        var kwl=kws[j].toLowerCase();
+        if(kwl===t){score+=kws[j].length*3;matched.push(kws[j]);break;}
+        else if(kwl.indexOf(t)>=0||t.indexOf(kwl)>=0){score+=kws[j].length;matched.push(kws[j]);break;}
+      }
+      if(t.length>=3&&head.indexOf(t)>=0)score+=15;
+    }
+    if(score>0)sectionScores.push([score,idx,matched]);
+  }
+  sectionScores.sort(function(a,b){return b[0]-a[0];});
+  var topSecs=sectionScores.slice(0,topN).map(function(s){
+    var rec=KB.index.r[s[1]];
+    var pg=rec[2]+(rec[3]!==rec[2]?'-'+rec[3]:'');
+    return {book:KB.index.b[rec[1]],page:pg,head:rec[4]||'',matched:s[2].slice(0,6),score:s[0]};
+  });
+  /* 薬剤スコアリング */
+  var drugScores=[];
+  KB.drug.forEach(function(d){
+    var joined=((d.n||'')+' '+(d.e||'')+' '+(d.b||'')).toLowerCase();
+    var score=0;
+    for(var i=0;i<terms.length;i++){
+      var t=terms[i];
+      if(t.length>=2&&joined.indexOf(t)>=0)score+=t.length*2;
+    }
+    if(score>0)drugScores.push([score,d]);
+  });
+  drugScores.sort(function(a,b){return b[0]-a[0];});
+  var topDrugs=drugScores.slice(0,12).map(function(s){return s[1];});
+  return {sections:topSecs,drugs:topDrugs};
+}
+/* AIプロンプト向けコンテキスト構築 */
+function buildKnowledgeContext(query){
+  if(!KB.loaded){
+    return '\n【ナレッジDB】未読込のため参照不可。読込完了後に再度解析してください。';
+  }
+  var r=searchKnowledge(query,15);
+  var out='\n\n═══════════════════════════════════════\n';
+  out+='【★★★ 参照可能なナレッジソース（この情報のみ使用可）★★★】\n';
+  out+='═══════════════════════════════════════\n';
+  out+='当院所有の書籍・薬剤DBから、患者情報と症状で検索した該当情報です。\n';
+  if(r.sections.length){
+    out+='\n■ 該当章（'+r.sections.length+'件、スコア順）:\n';
+    r.sections.forEach(function(s,i){
+      out+=(i+1)+'. 【'+s.book+' p.'+s.page+'】 '+s.head+'\n   関連キーワード: '+s.matched.join('／')+'\n';
+    });
+  }else{
+    out+='\n■ 該当章: なし\n';
+  }
+  if(r.drugs.length){
+    out+='\n■ 該当薬剤DB（'+r.drugs.length+'件、小動物の治療薬より）:\n';
+    r.drugs.forEach(function(d,i){
+      out+=(i+1)+'. 【'+d.n+'】('+d.e+') 商品名:'+d.b+' 剤形:'+d.f+' 経路:'+d.r+' 対象:'+(d.s||'')+'\n';
+      out+='   用量用法: '+d.d+'\n';
+      if(d.i)out+='   併用注意: '+d.i+'\n';
+      if(d.a)out+='   副作用: '+d.a+'\n';
+      if(d.c)out+='   備考: '+d.c.substring(0,150)+'\n';
+    });
+  }else{
+    out+='\n■ 該当薬剤: なし\n';
+  }
+  out+='\n═══════════════════════════════════════\n';
+  out+='【厳格ルール（絶対遵守）】\n';
+  out+='1. 上記ナレッジソース（該当章および薬剤DB）に含まれる情報のみを引用して回答すること。\n';
+  out+='2. 引用時は必ず出典明記: 例)「BUN高値時の対応（SMALL ANIMAL INTERNAL MEDICINE 上 p.115参照）」\n';
+  out+='3. 薬剤の用量・用法・併用注意・副作用は上記薬剤DBの記載値のみ使用可。DB外薬剤は「当院薬剤DB未収載につき使用不可」と明記し提案しないこと。\n';
+  out+='4. ナレッジソースに該当情報がない話題は「該当情報がナレッジDBに登録されていません。追加の書籍参照が必要です」と明記。\n';
+  out+='5. 一般的知識・記憶・推測からの回答は完全に禁止。ハルシネーションを絶対に避けること。\n';
+  out+='6. 各セクションの記述の末尾には根拠となった出典（該当章の書名・ページ）を必ず括弧書きで付記すること。\n';
+  out+='═══════════════════════════════════════\n';
+  return out;
 }
 
 function initDefaultClinic(){
@@ -896,10 +1020,14 @@ function startAnalysis(){
   var clinicInfo=currentClinic.name+' 〒'+currentClinic.zip+' '+currentClinic.addr+' TEL:'+currentClinic.tel;
   var evCtx=buildEvidenceContext();var vetCtx=buildVetContext(vn);var labCtx=buildLabContext();
   var prevCtx=prevValues.length?'\n【経時変化】前回値との比較コメントを各検査値に付加すること。':'';
+  /* ナレッジDBクエリ構築：主訴＋既往＋動物種＋異常検査値項目名 */
+  var abnormalItems=confirmedLabValues.filter(function(v){return v.flag&&v.flag!=='正常'&&v.flag!=='';}).map(function(v){return v.item;}).join(' ');
+  var kbQuery=sp+' '+(br||'')+' '+(ch||'')+' '+(hi||'')+' '+abnormalItems;
+  var kbCtx=buildKnowledgeContext(kbQuery);
   document.getElementById('lst').textContent='獣医師用レポートを生成中...';
   document.getElementById('lstep').textContent='Step 1/2: 鑑別診断・検査プラン・費用見積もり';
   buildContentBlocks(function(blocks){
-    var vtP='【獣医師用診断レポート】\n施設:'+clinicInfo+'\n患者情報:'+pi+vetCtx+evCtx+labCtx+prevCtx+'\n\n【1.検査結果サマリー】\n確認済み検査数値を表形式で整理。| 検査項目 | 今回値 | 前回値 | 基準値 | 判定 | 変化 |形式（前回値がある項目のみ前回値列に記載）。異常値★、高値H、低値L。\n\n【2.主要所見の評価】\n異常値・前回値からの変化ごとに臨床的意義・原因・緊急度(高/中/低)を解説。軽微な異常も必ず記載。\n\n【3.鑑別診断リスト(優先度順)】\n第1候補:病名/根拠/確率%\n第2候補:病名/根拠/確率%\n第3候補:病名/根拠/確率%\n除外すべき重篤疾患\n\n【4.推奨検査と費用】\n以下のJSON配列を<COST_JSON>タグで必ず出力:\n<COST_JSON>[{"name":"検査名","why":"理由1行","price_low":5000,"price_high":15000,"urgency":"高","what":"この検査でわかること"},{"name":"検査名2","why":"理由","price_low":3000,"price_high":8000,"urgency":"中","what":"わかること"}]</COST_JSON>\n3〜5件の検査を提案すること。\n\n【5.治療方針の暫定提案】\n即座の対応/薬物療法候補/食事・生活指導\n\n【6.モニタリング計画】\n再検査推奨時期/前回比較を踏まえた観察ポイント/悪化時の対応\n\n【7.クライアントへの説明スクリプト】\n経験レベルに合わせた説明スクリプト（導入→結果→前回比較→鑑別→次の検査→まとめ）';
+    var vtP='【獣医師用診断レポート】\n施設:'+clinicInfo+'\n患者情報:'+pi+vetCtx+evCtx+kbCtx+labCtx+prevCtx+'\n\n【1.検査結果サマリー】\n確認済み検査数値を表形式で整理。| 検査項目 | 今回値 | 前回値 | 基準値 | 判定 | 変化 |形式（前回値がある項目のみ前回値列に記載）。異常値★、高値H、低値L。\n\n【2.主要所見の評価】\n異常値・前回値からの変化ごとに臨床的意義・原因・緊急度(高/中/低)を解説。軽微な異常も必ず記載。\n\n【3.鑑別診断リスト(優先度順)】\n第1候補:病名/根拠/確率%\n第2候補:病名/根拠/確率%\n第3候補:病名/根拠/確率%\n除外すべき重篤疾患\n\n【4.推奨検査と費用】\n以下のJSON配列を<COST_JSON>タグで必ず出力:\n<COST_JSON>[{"name":"検査名","why":"理由1行","price_low":5000,"price_high":15000,"urgency":"高","what":"この検査でわかること"},{"name":"検査名2","why":"理由","price_low":3000,"price_high":8000,"urgency":"中","what":"わかること"}]</COST_JSON>\n3〜5件の検査を提案すること。\n\n【5.治療方針の暫定提案】\n即座の対応/薬物療法候補/食事・生活指導\n\n【6.モニタリング計画】\n再検査推奨時期/前回比較を踏まえた観察ポイント/悪化時の対応\n\n【7.クライアントへの説明スクリプト】\n経験レベルに合わせた説明スクリプト（導入→結果→前回比較→鑑別→次の検査→まとめ）';
     callAPI([{role:'user',content:blocks.concat([{type:'text',text:vtP}])}],6000,function(vt,err1){
       if(err1||!vt){fail('獣医師用レポート生成に失敗: '+(err1||'空のレスポンス'));return;}
       ad.vet=vt;
@@ -912,7 +1040,7 @@ function startAnalysis(){
       var minorAbnormals=confirmedLabValues.filter(function(v){return v.flag&&v.flag!=='正常'&&v.flag!=='';}).map(function(v){return v.item+'('+v.valueUnit+')';}).join('、');
       var costList=costs.map(function(c){return c.name+': '+c.why+' 費用目安'+c.price_low+'〜'+c.price_high+'円 緊急度:'+c.urgency;}).join('\n');
       var prevSummary=prevValues.length?prevValues.map(function(v){return v.item+' 前回:'+v.prev;}).join(' / '):'';
-      var otP='【'+currentClinic.name+' 検査結果説明資料】\n患者情報:'+pi+evCtx+labCtx+'\n\n【1.今日の検査について】\n1〜2行でシンプルに。\n\n【2.検査結果のわかりやすいまとめ】\n絵文字で直感的に: | 検査項目 | 今回の結果 | 前回の結果 | 状態 |\n状態: 正常=OK 要注意=注意 異常=異常 （前回値がある項目は変化を示す: 改善↑ 悪化↓ 変化なし→）\n\n【3.今の'+pn+'の状態】\n専門用語なし。数字は具体的な例えで説明。\n'+(prevSummary?'前回との比較: '+prevSummary+'\n前回からの変化についても分かりやすく説明する。':'')+'\n\n【4.考えられる原因】\n最も可能性が高いこと/その他\n\n【5.次のステップ（推奨する検査と費用）】\n'+costList+'\n各検査について飼い主目線でなぜ必要か・何がわかるかを優しく説明。費用の目安を明示。\n\n【6.気になる数値についてのQ&A】\n以下の検査値について飼い主が疑問・不安に思うことをQ&A形式で答えること。獣医師にとっては軽微でも飼い主には重大に感じることがある。\n対象:'+minorAbnormals+'（なければ最も気になりそうな数値を選ぶ）\nQ1: この数値は病気ですか？ A1:\nQ2: 食事や生活で改善できますか？ A2:\nQ3: 様子を見ていてよいですか？それとも急いだほうがよいですか？ A3:\nQ4: この先どうなる可能性がありますか？ A4:\nQ5: [飼い主がよく聞きそうな追加の質問] A5:\n\n【7.ご自宅での注意事項】\n食事/運動/すぐ来院が必要な緊急サイン\n\n【8.次回来院の目安】\n\n【9.担当獣医師からのメッセージ】\n温かみがあり信頼感が伝わるメッセージ。\n\n'+clinicInfo;
+      var otP='【'+currentClinic.name+' 検査結果説明資料】\n患者情報:'+pi+evCtx+kbCtx+labCtx+'\n\n【1.今日の検査について】\n1〜2行でシンプルに。\n\n【2.検査結果のわかりやすいまとめ】\n絵文字で直感的に: | 検査項目 | 今回の結果 | 前回の結果 | 状態 |\n状態: 正常=OK 要注意=注意 異常=異常 （前回値がある項目は変化を示す: 改善↑ 悪化↓ 変化なし→）\n\n【3.今の'+pn+'の状態】\n専門用語なし。数字は具体的な例えで説明。\n'+(prevSummary?'前回との比較: '+prevSummary+'\n前回からの変化についても分かりやすく説明する。':'')+'\n\n【4.考えられる原因】\n最も可能性が高いこと/その他\n\n【5.次のステップ（推奨する検査と費用）】\n'+costList+'\n各検査について飼い主目線でなぜ必要か・何がわかるかを優しく説明。費用の目安を明示。\n\n【6.気になる数値についてのQ&A】\n以下の検査値について飼い主が疑問・不安に思うことをQ&A形式で答えること。獣医師にとっては軽微でも飼い主には重大に感じることがある。\n対象:'+minorAbnormals+'（なければ最も気になりそうな数値を選ぶ）\nQ1: この数値は病気ですか？ A1:\nQ2: 食事や生活で改善できますか？ A2:\nQ3: 様子を見ていてよいですか？それとも急いだほうがよいですか？ A3:\nQ4: この先どうなる可能性がありますか？ A4:\nQ5: [飼い主がよく聞きそうな追加の質問] A5:\n\n【7.ご自宅での注意事項】\n食事/運動/すぐ来院が必要な緊急サイン\n\n【8.次回来院の目安】\n\n【9.担当獣医師からのメッセージ】\n温かみがあり信頼感が伝わるメッセージ。\n\n'+clinicInfo;
       callAPI([{role:'user',content:[{type:'text',text:otP+'\n\n参考(獣医師向け分析)\n'+vt.substring(0,2500)}]}],6000,function(ot,err2){
         if(err2||!ot){fail('オーナー向け資料生成に失敗: '+(err2||'空のレスポンス'));return;}
         ad.own=ot;
