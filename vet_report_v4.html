@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>VetAI Report Pro v5.0 (KB連携)</title>
+<title>VetAI Report Pro v5.0.1 (KB連携)</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -464,7 +464,7 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
     <div class="card">
       <div class="ct"><div class="ci">&#9432;</div>アプリ情報</div>
       <div style="font-size:11px;color:var(--text2);line-height:1.9">
-        <div>VetAI Report Pro v5.0 (院内ナレッジDB連携)</div>
+        <div>VetAI Report Pro v5.0.1 (院内ナレッジDB連携)</div>
         <div>対応モデル: claude-sonnet-4-6</div>
         <div>スマートフォン対応（Android / iOS）</div>
         <div style="margin-top:6px;color:var(--text3)">Powered by Anthropic Claude API</div>
@@ -520,8 +520,8 @@ function loadKnowledgeBase(){
   KB.loading=true;
   updateKBStatus('読込中...');
   Promise.all([
-    fetch('./knowledge/kb_index.json',{cache:'default'}).then(function(r){if(!r.ok)throw new Error('index HTTP '+r.status);return r.json();}),
-    fetch('./knowledge/kb_drug.json',{cache:'default'}).then(function(r){if(!r.ok)throw new Error('drug HTTP '+r.status);return r.json();})
+    fetch('./kb_index.json',{cache:'default'}).then(function(r){if(!r.ok)throw new Error('index HTTP '+r.status);return r.json();}),
+    fetch('./kb_drug.json',{cache:'default'}).then(function(r){if(!r.ok)throw new Error('drug HTTP '+r.status);return r.json();})
   ]).then(function(vals){
     KB.index=vals[0];KB.drug=vals[1];KB.loaded=true;KB.loading=false;
     updateKBStatus('ナレッジDB: '+KB.index.r.length+'章 / '+KB.drug.length+'薬剤 読込済');
