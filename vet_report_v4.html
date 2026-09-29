@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>VetAI Report Pro v5.1 (ハイブリッドKB)</title>
+<title>VetAI Report Pro v5.2 (関内料金表連携)</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -465,7 +465,7 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
     <div class="card">
       <div class="ct"><div class="ci">&#9432;</div>アプリ情報</div>
       <div style="font-size:11px;color:var(--text2);line-height:1.9">
-        <div>VetAI Report Pro v5.1 (院内ナレッジDB連携・ハイブリッド)</div>
+        <div>VetAI Report Pro v5.2 (関内料金表・スタッフ連携)</div>
         <div>対応モデル: claude-sonnet-4-6</div>
         <div>スマートフォン対応（Android / iOS）</div>
         <div style="margin-top:6px;color:var(--text3)">Powered by Anthropic Claude API</div>
@@ -520,21 +520,65 @@ function loadAll(){
 /* ====KNOWLEDGE BASE==== */
 var KB={index:null,drug:null,loaded:false,loading:false,error:null};
 function loadKnowledgeBase(){
-  if(!window.KB){window.KB={index:null,drug:null,loaded:false,loading:false,error:null};}
+  if(!window.KB){window.KB={index:null,drug:null,loaded:false,loading:false,error:null,kannaiPrices:null,kannaiStaff:null};}
   if(KB.loaded||KB.loading)return;
   KB.loading=true;
   updateKBStatus('読込中...');
+  /* ナレッジDB本体（必須）+ 関内施設データ（オプショナル、失敗しても本体は続行） */
+  var fetchOpt=function(url){return fetch(url,{cache:'default'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});};
   Promise.all([
     fetch('./kb_index.json',{cache:'default'}).then(function(r){if(!r.ok)throw new Error('index HTTP '+r.status);return r.json();}),
-    fetch('./kb_drug.json',{cache:'default'}).then(function(r){if(!r.ok)throw new Error('drug HTTP '+r.status);return r.json();})
+    fetch('./kb_drug.json',{cache:'default'}).then(function(r){if(!r.ok)throw new Error('drug HTTP '+r.status);return r.json();}),
+    fetchOpt('./kannai_prices.json'),
+    fetchOpt('./kannai_staff.json')
   ]).then(function(vals){
-    KB.index=vals[0];KB.drug=vals[1];KB.loaded=true;KB.loading=false;
-    updateKBStatus('ナレッジDB: '+KB.index.r.length+'章 / '+KB.drug.length+'薬剤 読込済');
+    KB.index=vals[0];KB.drug=vals[1];
+    KB.kannaiPrices=vals[2]; /* {clinic, prices:[[cat,item,price],...], updated} or null */
+    KB.kannaiStaff=vals[3];  /* {clinic, vets:[{name,kana,role},...], updated} or null */
+    KB.loaded=true;KB.loading=false;
+    var msg='ナレッジDB: '+KB.index.r.length+'章 / '+KB.drug.length+'薬剤';
+    if(KB.kannaiPrices)msg+=' / 関内料金'+KB.kannaiPrices.prices.length+'項目';
+    if(KB.kannaiStaff)msg+=' / 獣医師'+KB.kannaiStaff.vets.length+'名';
+    msg+=' 読込済';
+    updateKBStatus(msg);
+    /* 関内施設で獣医師名簿が空なら、スタッフ名簿を自動プリロード */
+    if(KB.kannaiStaff)autoPreloadKannaiVets();
   }).catch(function(e){
     KB.loading=false;KB.error=e.message;
     updateKBStatus('ナレッジDB読込失敗: '+e.message);
     console.error('KB load failed:',e);
   });
+}
+/* 関内施設が選択中で獣医師名簿が空なら自動プリロード */
+function autoPreloadKannaiVets(){
+  try{
+    if(!currentClinic||!currentClinic.name)return;
+    if(currentClinic.name.indexOf('関内')<0)return;
+    var vets=sget('vets')||[];
+    /* 既に登録されているvetの名前セット */
+    var existing={};vets.forEach(function(v){existing[v.name]=1;});
+    var added=0;
+    KB.kannaiStaff.vets.forEach(function(sv){
+      if(!existing[sv.name]){
+        vets.push({
+          id:'kannai_'+sv.name+'_'+Date.now()+'_'+added,
+          name:sv.name,
+          kana:sv.kana||'',
+          year:'',
+          spec:'',
+          level:3,
+          folderId:''
+        });
+        added++;
+      }
+    });
+    if(added>0){
+      sset('vets',vets);
+      if(typeof renderVetList==='function')renderVetList();
+      if(typeof updateVetDatalist==='function')updateVetDatalist();
+      showSb('関内スタッフ名簿から獣医師'+added+'名を自動登録しました',true);
+    }
+  }catch(e){console.warn('autoPreloadKannaiVets error:',e);}
 }
 function updateKBStatus(txt){
   var el=document.getElementById('kbStatus');
@@ -619,6 +663,25 @@ function buildKnowledgeContext(query){
   }else{
     out+='\n■ 該当薬剤: なし\n';
   }
+  /* 関内どうぶつクリニックの場合、施設料金表をプロンプトに追加 */
+  if(KB.kannaiPrices && currentClinic && currentClinic.name && currentClinic.name.indexOf('関内')>=0){
+    out+='\n■ 【関内どうぶつクリニック 実施可能な診療項目・料金表（'+KB.kannaiPrices.prices.length+'項目、2026年9月更新）】\n';
+    out+='※推奨検査・処置・治療を提案する際は、必ずこの料金表の項目名・料金を使用すること。\n';
+    /* カテゴリ別に整理 */
+    var byCategory={};
+    KB.kannaiPrices.prices.forEach(function(p){
+      var cat=p[0],item=p[1],price=p[2];
+      if(!byCategory[cat])byCategory[cat]=[];
+      byCategory[cat].push(item+' … '+price.toLocaleString()+'円');
+    });
+    var order=['検査料','特殊検査料','処置料','特殊処置料','注射、輸液、輸血料','手術料','麻酔料','入院料','診察料','循環器外来','眼科外来','癌治療','ワクチン','フィラリア予防','狂犬病薬'];
+    order.forEach(function(cat){
+      if(byCategory[cat]){
+        out+='\n【'+cat+'】\n';
+        byCategory[cat].forEach(function(line){out+='  ・'+line+'\n';});
+      }
+    });
+  }
   out+='\n═══════════════════════════════════════\n';
   out+='【ハイブリッド出典ルール】\n';
   out+='\n▼▼ 院内DB該当情報がある場合（優先）▼▼\n';
@@ -633,6 +696,14 @@ function buildKnowledgeContext(query){
   out+='・DB出典のある記述と【参考情報】の記述は視覚的に区別できるよう明記する。\n';
   out+='・確信のない部分・エビデンスが不十分な部分は「※要確認事項」と明記する。\n';
   out+='・DB該当が全くない話題でも「回答なし」とせず、【参考情報】として補完すること（ただし過度な推測は避ける）。\n';
+  /* 関内施設用の追加ルール */
+  if(KB.kannaiPrices && currentClinic && currentClinic.name && currentClinic.name.indexOf('関内')>=0){
+    out+='\n▼▼ 関内どうぶつクリニック 料金表運用ルール ▼▼\n';
+    out+='・「推奨検査と費用」および「次のステップ」で提案する項目は、必ず上記【関内どうぶつクリニック料金表】に掲載されている項目名を使用すること。\n';
+    out+='・料金表の金額をprice_low/price_highに反映すること（税抜表示のため、税込を出す場合は×1.1）。\n';
+    out+='・料金表に該当項目がない場合のみ、一般的な検査名と目安金額で提案し、末尾に「※院内料金表未登録項目・目安金額」と注記すること。\n';
+    out+='・COST_JSON の name フィールドには、料金表に登録された正確な項目名（診療項目名）を使うこと。\n';
+  }
   out+='═══════════════════════════════════════\n';
   return out;
 }
