@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>VetAI Report Pro v5.0.2 (KB連携)</title>
+<title>VetAI Report Pro v5.1 (ハイブリッドKB)</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -318,8 +318,9 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
       <div class="ct"><div class="ci">&#128214;</div>院内ナレッジDB自動参照 <div class="badge" id="kbBadge">RAG</div></div>
       <div id="kbStatus" style="font-size:11px;color:var(--accent2);font-weight:600;margin-bottom:6px">読込中...</div>
       <div style="font-size:10px;color:var(--text2);line-height:1.6">
-        患者情報・主訴・検査値から関連する<strong>書籍章・薬剤DB</strong>を自動検索し、その情報のみからAIが回答します。<br>
-        <span style="color:var(--gold2);font-weight:600">※ ナレッジDBに載っていない話題は「該当なし」と回答します。</span>
+        患者情報・主訴・検査値から関連する<strong>書籍章・薬剤DB</strong>を自動検索。<br>
+        <span style="color:var(--accent2);font-weight:600">✓ DB該当あり</span> → 【出典：書名 p.XX】を明記して信頼性を担保<br>
+        <span style="color:var(--gold2);font-weight:600">◇ DB該当なし</span> → 【参考情報】として一般文献から補完（区別表示）
       </div>
     </div>
 
@@ -464,7 +465,7 @@ body{font-family:"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text
     <div class="card">
       <div class="ct"><div class="ci">&#9432;</div>アプリ情報</div>
       <div style="font-size:11px;color:var(--text2);line-height:1.9">
-        <div>VetAI Report Pro v5.0.2 (院内ナレッジDB連携)</div>
+        <div>VetAI Report Pro v5.1 (院内ナレッジDB連携・ハイブリッド)</div>
         <div>対応モデル: claude-sonnet-4-6</div>
         <div>スマートフォン対応（Android / iOS）</div>
         <div style="margin-top:6px;color:var(--text3)">Powered by Anthropic Claude API</div>
@@ -619,13 +620,19 @@ function buildKnowledgeContext(query){
     out+='\n■ 該当薬剤: なし\n';
   }
   out+='\n═══════════════════════════════════════\n';
-  out+='【厳格ルール（絶対遵守）】\n';
-  out+='1. 上記ナレッジソース（該当章および薬剤DB）に含まれる情報のみを引用して回答すること。\n';
-  out+='2. 引用時は必ず出典明記: 例)「BUN高値時の対応（SMALL ANIMAL INTERNAL MEDICINE 上 p.115参照）」\n';
-  out+='3. 薬剤の用量・用法・併用注意・副作用は上記薬剤DBの記載値のみ使用可。DB外薬剤は「当院薬剤DB未収載につき使用不可」と明記し提案しないこと。\n';
-  out+='4. ナレッジソースに該当情報がない話題は「該当情報がナレッジDBに登録されていません。追加の書籍参照が必要です」と明記。\n';
-  out+='5. 一般的知識・記憶・推測からの回答は完全に禁止。ハルシネーションを絶対に避けること。\n';
-  out+='6. 各セクションの記述の末尾には根拠となった出典（該当章の書名・ページ）を必ず括弧書きで付記すること。\n';
+  out+='【ハイブリッド出典ルール】\n';
+  out+='\n▼▼ 院内DB該当情報がある場合（優先）▼▼\n';
+  out+='・上記ナレッジソース（該当章および薬剤DB）に該当情報がある場合は、必ずその情報を優先して引用する。\n';
+  out+='・引用時は必ず【出典：書名 p.XX】の形式で出典明記: 例)「BUN高値時の対応【出典：SMALL ANIMAL INTERNAL MEDICINE 上 p.115】」\n';
+  out+='・薬剤の用量・用法・副作用も、上記薬剤DBに記載があれば必ずその値を使用し【薬剤DB】と明記する。\n';
+  out+='\n▼▼ 院内DB該当情報がない場合（補完可）▼▼\n';
+  out+='・上記ナレッジソースに該当情報がない話題は、一般的な獣医学知識で補完してよい。\n';
+  out+='・その場合は【参考情報】マーカーを冒頭に付け、末尾に「※院内ナレッジDB未収載のため一般的な獣医学文献に基づく参考情報」と注記すること。\n';
+  out+='・DB未収載薬剤を提案する場合は「※院内薬剤DB未収載・一般的な用量目安」と注記する。\n';
+  out+='\n▼▼ 全セクション共通 ▼▼\n';
+  out+='・DB出典のある記述と【参考情報】の記述は視覚的に区別できるよう明記する。\n';
+  out+='・確信のない部分・エビデンスが不十分な部分は「※要確認事項」と明記する。\n';
+  out+='・DB該当が全くない話題でも「回答なし」とせず、【参考情報】として補完すること（ただし過度な推測は避ける）。\n';
   out+='═══════════════════════════════════════\n';
   return out;
 }
